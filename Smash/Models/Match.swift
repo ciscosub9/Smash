@@ -2,7 +2,7 @@ import Foundation
 import SwiftData
 
 /// The outcome of a single match, derived from the recorded game scores.
-enum MatchOutcome: Equatable {
+nonisolated enum MatchOutcome: Equatable {
     case win
     case loss
     case draw
@@ -74,7 +74,7 @@ final class Match {
 
 // MARK: - Outcome logic (pure, unit-testable)
 
-enum MatchLogic {
+nonisolated enum MatchLogic {
     /// Outcome for a single game: higher points wins.
     static func gameOutcome(myPoints: Int, opponentPoints: Int) -> MatchOutcome {
         if myPoints > opponentPoints { return .win }

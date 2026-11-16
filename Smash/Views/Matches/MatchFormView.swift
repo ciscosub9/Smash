@@ -6,8 +6,7 @@ struct MatchFormView: View {
     @Environment(\.dismiss) private var dismiss
     @Query(sort: \Tournament.startDate, order: .reverse) private var tournaments: [Tournament]
 
-    enum Field { case opponent }
-    @FocusState private var focusedField: Field?
+    @FocusState private var nameFocused: Bool
 
     // Form state
     @State private var opponent = ""
@@ -25,6 +24,8 @@ struct MatchFormView: View {
     private let editing: Match?
     private let presetTournament: Tournament?
 
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
     /// Pass `match` to edit an existing match, or `presetTournament`
     /// when opening from inside a tournament.
     init(match: Match? = nil, presetTournament: Tournament? = nil) {
@@ -37,7 +38,7 @@ struct MatchFormView: View {
             Form {
                 Section("Opponent") {
                     TextField("Name", text: $opponent)
-                        .focused($focusedField)
+                        .focused($nameFocused)
                         .textInputAutocapitalization(.words)
                     if !suggestedOpponents.isEmpty {
                         ScrollView(.horizontal, showsIndicators: false) {
@@ -130,7 +131,10 @@ struct MatchFormView: View {
                 }
             }
             .sensoryFeedback(.success, trigger: saved)
-            .onAppear(perform: populate)
+            .onAppear {
+                populate()
+                if editing == nil { nameFocused = true }
+            }
         }
     }
 

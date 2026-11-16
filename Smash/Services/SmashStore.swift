@@ -1,6 +1,7 @@
 import Foundation
 import Observation
 import SwiftData
+import os
 
 /// Where Smash stores its data.
 enum SyncMode: String, CaseIterable {

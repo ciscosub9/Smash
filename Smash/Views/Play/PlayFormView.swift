@@ -6,9 +6,6 @@ struct PlayFormView: View {
     @Environment(\.dismiss) private var dismiss
     @Query(sort: \PlaySession.date, order: .reverse) private var sessions: [PlaySession]
 
-    enum Field { case location, opponents }
-    @FocusState private var focusedField: Field?
-
     @State private var date = Date.now
     /// Duration in 15-minute steps.
     @State private var durationMinutes = 60
@@ -65,14 +62,12 @@ struct PlayFormView: View {
 
                 Section {
                     TextField("Court, club, park…", text: $location)
-                        .focused($focusedField)
                 } header: {
                     Text("Where")
                 }
 
                 Section {
                     TextField("Comma separated — Ravi, Anil", text: $opponentsText)
-                        .focused($focusedField)
                         .textInputAutocapitalization(.words)
                     if !opponentChips.isEmpty {
                         ScrollView(.horizontal, showsIndicators: false) {

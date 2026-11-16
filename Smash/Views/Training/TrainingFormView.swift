@@ -6,10 +6,6 @@ struct TrainingFormView: View {
     @Environment(\.dismiss) private var dismiss
     @Query(sort: \TrainingSession.date, order: .reverse) private var sessions: [TrainingSession]
 
-    @FocusState private var focusedField: Field?
-
-    enum Field { case coach, drills }
-
     @State private var date = Date.now
     @State private var durationMinutes = 60
     @State private var coach = ""
@@ -48,7 +44,6 @@ struct TrainingFormView: View {
                         .sensoryFeedback(.selection, trigger: durationMinutes)
                     }
                     TextField("Coach", text: $coach)
-                        .focused($focusedField)
                 }
 
                 Section {
@@ -82,7 +77,6 @@ struct TrainingFormView: View {
 
                 Section {
                     TextField("e.g. Shadow footwork 3×10, half-court smash rallies, net kills…", text: $drillsDescription, axis: .vertical)
-                        .focused($focusedField)
                         .lineLimit(3...8)
                 } header: {
                     Text("What was done")
