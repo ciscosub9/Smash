@@ -1,0 +1,62 @@
+name: Smash
+options:
+  bundleIdPrefix: com.smashapp
+  deploymentTarget:
+    iOS: "18.0"
+  createIntermediateGroups: true
+
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    SWIFT_APPROACHABLE_CONCURRENCY: YES
+    SWIFT_DEFAULT_ACTOR_ISOLATION: MainActor
+    IPHONEOS_DEPLOYMENT_TARGET: "18.0"
+    TARGETED_DEVICE_FAMILY: "1" # iPhone first; 1,2 later for iPad
+
+targets:
+  Smash:
+    type: application
+    platform: iOS
+    sources:
+      - path: Smash
+    entitlements:
+      path: Smash/Smash.entitlements
+      properties:
+        com.apple.developer.icloud-services: [CloudKit]
+        com.apple.developer.icloud-container-identifiers: [iCloud.com.smashapp.smash]
+        aps-environment: development
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.smashapp.smash
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_CFBundleDisplayName: Smash
+        INFOPLIST_KEY_UILaunchScreen_Generation: YES
+        INFOPLIST_KEY_UISupportedInterfaceOrientations: UIInterfaceOrientationPortrait
+        INFOPLIST_KEY_CFBundleShortVersionString: "1.0.0"
+        INFOPLIST_KEY_CFBundleVersion: "1"
+        CODE_SIGN_ENTITLEMENTS: Smash/Smash.entitlements
+        ENABLE_PREVIEWS: YES
+
+  SmashTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: Tests
+    dependencies:
+      - target: Smash
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+
+schemes:
+  Smash:
+    build:
+      targets:
+        Smash: all
+        SmashTests: [test]
+    run:
+      config: Debug
+    test:
+      config: Debug
+      targets:
+        - SmashTests
