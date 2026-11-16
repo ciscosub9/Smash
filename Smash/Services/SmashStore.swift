@@ -7,7 +7,6 @@ import os
 enum SyncMode: String, CaseIterable {
     case local
     case iCloud
-
     var label: String {
         switch self {
         case .local: "On this iPhone"

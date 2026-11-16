@@ -3,10 +3,28 @@ import SwiftUI
 struct SettingsView: View {
     @Environment(SmashStore.self) private var store
     @Environment(\.dismiss) private var dismiss
+    @AppStorage(AppearancePreference.storageKey) private var appearanceRaw = AppearancePreference.system.rawValue
 
     var body: some View {
         NavigationStack {
             Form {
+                Section {
+                    Picker("Appearance", selection: Binding(
+                        get: { AppearancePreference(rawValue: appearanceRaw) ?? .system },
+                        set: { appearanceRaw = $0.rawValue }
+                    )) {
+                        ForEach(AppearancePreference.allCases) { preference in
+                            Text(preference.label).tag(preference)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                    .labelsHidden()
+                } header: {
+                    Text("Appearance")
+                } footer: {
+                    Text("Automatic follows your iPhone's system setting.")
+                }
+
                 Section {
                     Picker("Storage", selection: Binding(
                         get: { store.syncMode },

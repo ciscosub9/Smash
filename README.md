@@ -18,7 +18,8 @@ Track daily play, coaching sessions, matches with full scoring, and tournaments 
 - **Training** — record coaching and drill sessions: what you worked on (footwork, smashes, net play…), with whom, and notes on what to repeat.
 - **Matches** — full score tracking with three point systems (15-point, 21-point rally, continuous) in single-game or best-of-3 format. Win rate is computed automatically per opponent and per scoring system.
 - **Tournaments** — round robin, knockout, league, and ladder formats. Link matches to a tournament, track wins/losses and placement, and keep strategy notes.
-- **Dashboard** — weekly on-court time, day streaks, win rate, and recent results at a glance (Swift Charts).
+- **Dashboard** — weekly on-court time, streaks, win rate, and recent results at a glance (Swift Charts).
+- **Appearance** — Automatic (follows system), Light, or Dark, set in-app.
 - **Your data, your choice** — store everything locally on device (default, private) or flip on iCloud sync in Settings. No accounts, no analytics, no tracking.
 
 ## Design
