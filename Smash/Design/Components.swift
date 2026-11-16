@@ -20,11 +20,6 @@ enum AppFormat {
         formatter.timeStyle = .none
         return formatter
     }()
-
-    /// Short weekday label for chart axis — "Mon".
-    static func weekday(_ date: Date, calendar: Calendar = .current) -> String {
-        calendar.veryShortWeekdaySymbols[calendar.component(.weekday, from: date) - 1]
-    }
 }
 
 // MARK: - Press feedback

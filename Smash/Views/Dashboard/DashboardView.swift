@@ -58,7 +58,7 @@ struct DashboardView: View {
                 tint: .green
             )
             StatCard(
-                title: "Day streak",
+                title: "Streak",
                 value: streakLabel,
                 symbol: "flame",
                 tint: .orange
@@ -79,16 +79,19 @@ struct DashboardView: View {
     }
 
     private var streakLabel: String {
-        guard let streak = Stats.currentStreak(matches), streak.count > 1 else {
-            return "\(Stats.activityStreak(play: playSessions, training: trainingSessions))d"
+        if let streak = Stats.currentStreak(matches) {
+            let kind = streak.kind == .win ? "W" : "L"
+            return "\(streak.count)\(kind)"
         }
-        let kind = streak.kind == .win ? "W" : "L"
-        return "\(streak.count)\(kind)"
+        let days = Stats.activityStreak(play: playSessions, training: trainingSessions)
+        return days > 0 ? "\(days)d" : "–"
     }
 
     private var winRateLabel: String {
         let rate = MatchLogic.winRate(of: matches)
-        return rate == 0 && matches.isEmpty ? "–" : rate.formatted(.percent)
+        return rate == 0 && matches.isEmpty
+            ? "–"
+            : rate.formatted(.percent.precision(.fractionLength(0)))
     }
 
     // MARK: - Chart
@@ -98,18 +101,29 @@ struct DashboardView: View {
             Text("Last 7 days")
                 .font(.headline)
 
-            Chart(activity) { day in
+            Chart(Array(activity.enumerated()), id: \.element.id) { index, day in
                 BarMark(
-                    x: .value("Day", AppFormat.weekday(day.day)),
+                    x: .value("Day", "\(index)"),
                     y: .value("Minutes", day.playMinutes)
                 )
                 .foregroundStyle(Color.green.gradient)
 
                 BarMark(
-                    x: .value("Day", AppFormat.weekday(day.day)),
+                    x: .value("Day", "\(index)"),
                     y: .value("Minutes", day.trainingMinutes)
                 )
                 .foregroundStyle(Color.blue.gradient)
+            }
+            .chartXAxis {
+                AxisMarks { value in
+                    AxisGridLine()
+                    AxisValueLabel {
+                        if let index = value.as(String.self).flatMap(Int.init),
+                           activity.indices.contains(index) {
+                            Text(activity[index].day, format: .dateTime.weekday(.narrow))
+                        }
+                    }
+                }
             }
             .chartForegroundStyleScale([
                 "Play": Color.green,

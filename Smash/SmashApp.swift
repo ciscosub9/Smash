@@ -11,6 +11,11 @@ struct SmashApp: App {
                 .modelContainer(store.container)
                 .environment(store)
                 .tint(.accentColor)
+                .task {
+                    if CommandLine.arguments.contains("-sampleData") {
+                        SampleData.seedIfNeeded(context: store.container.mainContext)
+                    }
+                }
         }
     }
 }
