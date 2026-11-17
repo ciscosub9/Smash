@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="Docs/app-icon.png" width="180" alt="Smash app icon" />
+<img src="Docs/app-icon-rounded.png" width="180" alt="Smash app icon" />
 
 # Smash
 
