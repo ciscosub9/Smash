@@ -8,7 +8,7 @@ Track daily play, coaching sessions, matches with full scoring, and tournaments 
 
 [![Platform](https://img.shields.io/badge/platform-iOS%2018+-black)](#)
 [![Swift](https://img.shields.io/badge/swift-6-orange)](#)
-[![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
+[![License: GPL v3](https://img.shields.io/badge/license-GPL--v3-blue)](LICENSE)
 
 </div>
 
@@ -76,8 +76,13 @@ Smash/
 
 ## Contributing
 
-Issues and pull requests welcome — this project exists to be forked, improved, and played with. For large changes, open an issue first to discuss.
+Issues and pull requests welcome — this project exists to be forked, improved, and played with. For large changes, open an issue first to discuss. Note that all contributions land under GPL-3.0.
 
 ## License
 
-[MIT](LICENSE) — free to use, modify, and ship, including on the App Store.
+Smash is [free software](https://www.gnu.org/philosophy/free-sw.en.html), licensed under the [GNU General Public License v3.0](LICENSE).
+
+- **Use, study, modify, share** — anyone may do all of these.
+- **Copyleft** — any fork or derivative, including commercial or App Store distributions, must be released under GPL-3.0 with its full source code. Closed-source clones of this code are not permitted.
+- **Attribution appreciated** — if you build on Smash, a credit and a link back to this repository are welcome.
+- **A note on the App Store** — the GPL is widely considered incompatible with Apple's App Store distribution terms (Apple's DRM and remote-review requirements don't fit the GPL's rules). As the copyright holder, I may still distribute my own builds on the App Store — the license doesn't bind the copyright owner. Anyone else doing so must comply with the GPL.
