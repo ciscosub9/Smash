@@ -98,6 +98,19 @@ enum Stats {
         return streak
     }
 
+    // MARK: Goals
+
+    /// Sessions (play + training) whose date falls inside `interval`.
+    /// Matches don't count — they're games played *within* sessions.
+    static func sessions(
+        play: [PlaySession],
+        training: [TrainingSession],
+        in interval: DateInterval
+    ) -> Int {
+        play.filter { interval.contains($0.date) }.count
+            + training.filter { interval.contains($0.date) }.count
+    }
+
     // MARK: Matches
 
     /// All distinct opponents across matches, alphabetically.

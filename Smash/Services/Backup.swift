@@ -311,7 +311,9 @@ nonisolated enum Backup {
 
         bundle.player = PlayerProfileSnapshot(
             name: PlayerProfile.name,
-            skillLevel: PlayerProfile.skillLevel
+            skillLevel: PlayerProfile.skillLevel,
+            goalKind: PlayerGoal.kind == .none ? nil : PlayerGoal.kind,
+            goalTarget: PlayerGoal.kind == .none ? nil : PlayerGoal.target
         )
         bundle.playSessions = try context.fetch(FetchDescriptor<PlaySession>()).map(PlaySessionSnapshot.init)
         bundle.trainingSessions = try context.fetch(FetchDescriptor<TrainingSession>()).map(TrainingSessionSnapshot.init)
@@ -336,6 +338,10 @@ nonisolated enum Backup {
         if let player = bundle.player {
             PlayerProfile.name = player.name
             PlayerProfile.skillLevel = player.skill
+            if let goal = player.goal {
+                PlayerGoal.kind = goal
+                PlayerGoal.target = player.goalTarget ?? PlayerGoal.target
+            }
         }
 
         let tournamentsById = Dictionary(

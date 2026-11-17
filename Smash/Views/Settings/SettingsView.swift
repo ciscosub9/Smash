@@ -11,6 +11,8 @@ struct SettingsView: View {
     // Player profile
     @AppStorage(PlayerProfile.nameKey) private var playerName = ""
     @AppStorage(PlayerProfile.skillKey) private var playerSkillRaw = ""
+    @AppStorage(PlayerGoal.kindKey) private var goalKindRaw = GoalKind.none.rawValue
+    @AppStorage(PlayerGoal.targetKey) private var goalTarget = 3
 
     // Export
     @State private var encryptExport = false
@@ -106,10 +108,21 @@ struct SettingsView: View {
                     Text(level.label).tag(level.rawValue)
                 }
             }
+            Picker("Activity goal", selection: $goalKindRaw) {
+                ForEach(GoalKind.allCases) { kind in
+                    Text(kind.label).tag(kind.rawValue)
+                }
+            }
+            if let kind = GoalKind(rawValue: goalKindRaw), kind != .none {
+                Stepper(value: $goalTarget, in: kind.targetRange) {
+                    Text("\(goalTarget) sessions a \(kind.unit)")
+                        .monospacedDigit()
+                }
+            }
         } header: {
             Text("Player profile")
         } footer: {
-            Text("You. The same levels (Beginner → Professional) can be set for each opponent on a match.")
+            Text("You. The same levels (Beginner → Professional) can be set for each opponent on a match. The goal counts play and training sessions — the Dashboard tracks your progress.")
         }
     }
 

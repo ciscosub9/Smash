@@ -12,6 +12,8 @@ struct DashboardView: View {
     /// `simctl launch com.smashapp.smash -settings`
     @State private var showSettings = CommandLine.arguments.contains("-settings")
     @AppStorage(AppearancePreference.storageKey) private var appearanceRaw = AppearancePreference.system.rawValue
+    @AppStorage(PlayerGoal.kindKey) private var goalKindRaw = GoalKind.none.rawValue
+    @AppStorage(PlayerGoal.targetKey) private var goalTarget = 3
     @Environment(\.colorScheme) private var systemColorScheme
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -25,6 +27,9 @@ struct DashboardView: View {
             ScrollView {
                 VStack(spacing: 16) {
                     statGrid
+                    if goalProgress != nil {
+                        goalCard
+                    }
                     activityChart
                     recentMatches
                 }
@@ -119,6 +124,75 @@ struct DashboardView: View {
         return rate == 0 && matches.isEmpty
             ? "–"
             : rate.formatted(.percent.precision(.fractionLength(0)))
+    }
+
+    // MARK: - Goal
+    //
+    // v1 placement: a live progress card. The end-of-week recap / celebration
+    // screen is intentionally left for a later design pass.
+
+    private var goalProgress: (count: Int, target: Int, kind: GoalKind)? {
+        let kind = GoalKind(rawValue: goalKindRaw) ?? .none
+        guard kind != .none else { return nil }
+
+        let calendar = Calendar.current
+        let interval: DateInterval?
+        switch kind {
+        case .none: interval = nil
+        case .weekly: interval = calendar.dateInterval(of: .weekOfYear, for: .now)
+        case .monthly: interval = calendar.dateInterval(of: .month, for: .now)
+        }
+        guard let interval else { return nil }
+
+        let count = Stats.sessions(play: playSessions, training: trainingSessions, in: interval)
+        return (count, max(1, goalTarget), kind)
+    }
+
+    private var goalCard: some View {
+        let progress = goalProgress!
+        let isMet = progress.count >= progress.target
+        let fraction = min(Double(progress.count) / Double(progress.target), 1)
+        let remaining = max(progress.target - progress.count, 0)
+
+        return VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Label(progress.kind == .weekly ? "Weekly goal" : "Monthly goal", systemImage: "target")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                Spacer()
+                if isMet {
+                    Label("Smashed!", systemImage: "checkmark.circle.fill")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.green)
+                        .contentTransition(.symbolEffect(.replace))
+                } else {
+                    Text("\(progress.count) of \(progress.target)")
+                        .font(.caption.weight(.semibold))
+                        .monospacedDigit()
+                        .foregroundStyle(.secondary)
+                        .contentTransition(.numericText())
+                }
+            }
+
+            ProgressView(value: fraction)
+                .progressViewStyle(.linear)
+                .tint(isMet ? .green : .accentColor)
+
+            Text(isMet
+                 ? "Goal met — \(progress.target) sessions this \(progress.kind.unit). See you on court."
+                 : "\(remaining) session\(remaining == 1 ? "" : "s") to go this \(progress.kind.unit).")
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+        }
+        .cardStyle()
+        .animation(reduceMotion ? nil : .smooth(duration: 0.3), value: isMet)
+        .sensoryFeedback(.success, trigger: isMet)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(
+            isMet
+            ? "Goal smashed: \(progress.count) of \(progress.target) sessions this \(progress.kind.unit)"
+            : "\(progress.count) of \(progress.target) sessions this \(progress.kind.unit), \(remaining) to go"
+        )
     }
 
     // MARK: - Chart

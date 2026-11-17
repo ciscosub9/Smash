@@ -22,6 +22,7 @@ Track daily play, coaching sessions, matches with full scoring, and tournaments 
 - **Appearance** — Automatic (follows system), Light, or Dark — quick switch on the Dashboard, full control in Settings.
 - **Backup & import** — export all data as JSON from Settings, optionally encrypted with a password (PBKDF2 + AES-256-GCM). Import merges records back without overwriting anything.
 - **Player profile** — your name and skill level, kept alongside the same Beginner → Professional scale used for opponents.
+- **Activity goals** — set a weekly or monthly target ("5 sessions a week") in your profile; the Dashboard tracks progress live and celebrates when you hit it.
 - **Your data, your choice** — store everything locally on device (default, private) or flip on iCloud sync in Settings. No accounts, no analytics, no tracking.
 
 ## Design

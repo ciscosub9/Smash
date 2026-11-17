@@ -25,6 +25,8 @@ struct BackupTests {
     func roundTrip() throws {
         let source = makeContainer()
         SampleData.seed(context: source.mainContext)
+        PlayerGoal.kind = .weekly
+        PlayerGoal.target = 5
 
         let data = try Backup.exportData(context: source.mainContext)
 
@@ -35,6 +37,11 @@ struct BackupTests {
         #expect(summary.playSessions == 4)
         #expect(summary.trainingSessions == 2)
         #expect(summary.tournaments == 1)
+
+        // The goal rides along in the backup.
+        #expect(PlayerGoal.kind == .weekly)
+        #expect(PlayerGoal.target == 5)
+        PlayerGoal.kind = .none
 
         let importedMatches = try destination.mainContext.fetch(FetchDescriptor<Match>())
         #expect(importedMatches.count == 3)

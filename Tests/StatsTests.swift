@@ -137,3 +137,46 @@ struct StatsTests {
         #expect(streak?.count == 3)
     }
 }
+
+@Suite("Goal progress")
+struct GoalProgressTests {
+
+    private func day(_ offset: Int, from reference: Date, calendar: Calendar = .current) -> Date {
+        calendar.date(byAdding: .day, value: offset, to: reference)!
+    }
+
+    @Test("Sessions counts play and training inside the interval only")
+    func countsInsideInterval() {
+        let calendar = Calendar.current
+        let now = Date()
+        let week = calendar.dateInterval(of: .weekOfYear, for: now)!
+
+        let playInWeek = PlaySession(date: calendar.date(byAdding: .hour, value: 1, to: week.start)!)
+        let trainingInWeek = TrainingSession(date: now, durationMinutes: 45)
+        let playBeforeWeek = PlaySession(date: calendar.date(byAdding: .day, value: -3, to: week.start)!)
+        let playAfterWeek = PlaySession(date: calendar.date(byAdding: .day, value: 2, to: week.end)!)
+
+        let count = Stats.sessions(
+            play: [playInWeek, playBeforeWeek, playAfterWeek],
+            training: [trainingInWeek],
+            in: week
+        )
+
+        #expect(count == 2)
+    }
+
+    @Test("Monthly goal counts across the whole calendar month")
+    func monthlyInterval() {
+        let calendar = Calendar.current
+        let now = Date()
+        let month = calendar.dateInterval(of: .month, for: now)!
+
+        let play = [
+            PlaySession(date: month.start),
+            PlaySession(date: calendar.date(byAdding: .day, value: 10, to: month.start)!),
+            PlaySession(date: calendar.date(byAdding: .month, value: -1, to: month.start)!),
+        ]
+
+        #expect(Stats.sessions(play: play, training: [], in: month) == 2)
+    }
+}
