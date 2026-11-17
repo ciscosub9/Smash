@@ -1,5 +1,7 @@
 <div align="center">
 
+<img src="Docs/icon-1024.png" width="180" alt="Smash app icon" />
+
 # 🏸 Smash
 
 **Free, open-source badminton tracking for iPhone.**
@@ -71,7 +73,8 @@ Smash/
 
 ## Roadmap
 
-- [ ] App icon & App Store assets
+- [x] App icon
+- [ ] App Store listing assets
 - [x] Export data (JSON, optional password encryption) · import merges back
 - [ ] Per-opponent history drill-down
 - [ ] Apple Watch companion
