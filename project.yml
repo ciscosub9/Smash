@@ -34,6 +34,9 @@ targets:
         INFOPLIST_KEY_UISupportedInterfaceOrientations: UIInterfaceOrientationPortrait
         INFOPLIST_KEY_CFBundleShortVersionString: "1.0.0"
         INFOPLIST_KEY_CFBundleVersion: "1"
+        # Backup files use Apple's standard AES-GCM for user-data protection —
+        # qualifies as exempt encryption; skips the export-compliance prompt on upload.
+        INFOPLIST_KEY_ITSAppUsesNonExemptEncryption: NO
         CODE_SIGN_ENTITLEMENTS: Smash/Smash.entitlements
         ENABLE_PREVIEWS: YES
 
