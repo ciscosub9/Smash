@@ -2,7 +2,7 @@
 
 <img src="Docs/app-icon.png" width="180" alt="Smash app icon" />
 
-# 🏸 Smash
+# Smash
 
 **Free, open-source badminton tracking for iPhone.**
 
