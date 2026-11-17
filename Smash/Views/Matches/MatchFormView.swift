@@ -17,6 +17,8 @@ struct MatchFormView: View {
     @State private var myScores: [Int] = [0, 0, 0]
     @State private var opponentScores: [Int] = [0, 0, 0]
     @State private var selectedTournament: Tournament?
+    @State private var opponentLevel: SkillLevel?
+    @State private var intensity: Intensity?
     @State private var notes = ""
     @State private var saved = false
     @State private var knownOpponents: [String] = []
@@ -56,6 +58,12 @@ struct MatchFormView: View {
                                     .buttonStyle(PressableStyle())
                                 }
                             }
+                        }
+                    }
+                    Picker("Level", selection: $opponentLevel) {
+                        Text("Not set").tag(SkillLevel?.none)
+                        ForEach(SkillLevel.allCases) { level in
+                            Text(level.label).tag(SkillLevel?.some(level))
                         }
                     }
                 }
@@ -108,6 +116,12 @@ struct MatchFormView: View {
                         Text("None").tag(Tournament?.none)
                         ForEach(tournaments) { tournament in
                             Text(tournament.name).tag(Tournament?.some(tournament))
+                        }
+                    }
+                    Picker("Intensity", selection: $intensity) {
+                        Text("Not set").tag(Intensity?.none)
+                        ForEach(Intensity.allCases) { level in
+                            Text(level.label).tag(Intensity?.some(level))
                         }
                     }
                 }
@@ -191,6 +205,8 @@ struct MatchFormView: View {
             myScores = mine
             opponentScores = theirs
             selectedTournament = editing.tournament
+            opponentLevel = editing.opponentLevel
+            intensity = editing.intensity
             notes = editing.notes ?? ""
         } else if let presetTournament {
             selectedTournament = presetTournament
@@ -213,6 +229,8 @@ struct MatchFormView: View {
             editing.opponentGameScores = oppGames
             editing.notes = notes.isEmpty ? nil : notes
             editing.tournament = selectedTournament
+            editing.opponentLevel = opponentLevel
+            editing.intensity = intensity
         } else {
             context.insert(Match(
                 date: date,
@@ -223,6 +241,8 @@ struct MatchFormView: View {
                 myGameScores: myGames,
                 opponentGameScores: oppGames,
                 notes: notes.isEmpty ? nil : notes,
+                opponentLevel: opponentLevel,
+                intensity: intensity,
                 tournament: selectedTournament
             ))
         }

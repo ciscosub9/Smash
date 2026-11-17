@@ -23,6 +23,11 @@ final class Match {
     var opponentGameScores: [Int] = []
     var notes: String? = nil
 
+    /// Opponent's skill tier (Beginner…Professional).
+    var opponentLevelRaw: String? = nil
+    /// How hard the match felt.
+    var intensityRaw: String? = nil
+
     @Relationship(inverse: \Tournament.matches)
     var tournament: Tournament? = nil
 
@@ -35,6 +40,8 @@ final class Match {
         myGameScores: [Int] = [],
         opponentGameScores: [Int] = [],
         notes: String? = nil,
+        opponentLevel: SkillLevel? = nil,
+        intensity: Intensity? = nil,
         tournament: Tournament? = nil
     ) {
         self.date = date
@@ -45,6 +52,8 @@ final class Match {
         self.myGameScores = myGameScores
         self.opponentGameScores = opponentGameScores
         self.notes = notes
+        self.opponentLevelRaw = opponentLevel?.rawValue
+        self.intensityRaw = intensity?.rawValue
         self.tournament = tournament
     }
 
@@ -63,6 +72,16 @@ final class Match {
     var format: MatchFormat {
         get { MatchFormat(rawValue: formatRaw) ?? .bestOf3 }
         set { formatRaw = newValue.rawValue }
+    }
+
+    var opponentLevel: SkillLevel? {
+        get { opponentLevelRaw.flatMap(SkillLevel.init(rawValue:)) }
+        set { opponentLevelRaw = newValue?.rawValue }
+    }
+
+    var intensity: Intensity? {
+        get { intensityRaw.flatMap(Intensity.init(rawValue:)) }
+        set { intensityRaw = newValue?.rawValue }
     }
 
     /// Score of one game as "(me) – (them)".

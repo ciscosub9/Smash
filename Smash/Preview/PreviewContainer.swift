@@ -24,6 +24,7 @@ enum SampleData {
         context.insert(tournament)
 
         context.insert(Match(
+            date: calendar.date(byAdding: .day, value: -1, to: .now) ?? .now,
             opponent: "Ravi",
             discipline: .singles,
             pointSystem: .points21,
@@ -31,6 +32,8 @@ enum SampleData {
             myGameScores: [21, 18, 21],
             opponentGameScores: [15, 21, 19],
             notes: "Slow start in game two — stayed patient on the decider.",
+            opponentLevel: .intermediate,
+            intensity: .hard,
             tournament: tournament
         ))
         context.insert(Match(
@@ -40,7 +43,9 @@ enum SampleData {
             pointSystem: .points15,
             format: .singleGame,
             myGameScores: [15],
-            opponentGameScores: [11]
+            opponentGameScores: [11],
+            opponentLevel: .beginner,
+            intensity: .easy
         ))
         context.insert(Match(
             date: calendar.date(byAdding: .day, value: -4, to: .now) ?? .now,
@@ -49,7 +54,9 @@ enum SampleData {
             pointSystem: .continuous,
             format: .singleGame,
             myGameScores: [38],
-            opponentGameScores: [41]
+            opponentGameScores: [41],
+            opponentLevel: .intermediate,
+            intensity: .moderate
         ))
 
         for (offset, minutes) in [(0, 60), (1, 90), (3, 60), (4, 45)] {
@@ -67,12 +74,18 @@ enum SampleData {
             coach: "Coach Manoj",
             focusAreas: [TrainingFocus.footwork.label, TrainingFocus.smashes.label],
             drillsDescription: "Shadow footwork 3×10, half-court smash rallies, net kill practice.",
+            drillName: "Multi-shuttle",
+            setsDone: 6,
+            intensity: .hard,
             notes: "Lunge depth improving — keep an eye on right-knee position."
         ))
         context.insert(TrainingSession(
             durationMinutes: 45,
             focusAreas: [TrainingFocus.serves.label, TrainingFocus.netPlay.label],
-            drillsDescription: "Short serve accuracy ladder, spin net shots."
+            drillsDescription: "Short serve accuracy ladder, spin net shots.",
+            drillName: "Serve accuracy",
+            setsDone: 4,
+            intensity: .easy
         ))
     }
 }
@@ -86,7 +99,7 @@ enum PreviewContainer {
             Match.self,
             Tournament.self,
         ])
-        let config = ModelConfiguration(isStoredInMemoryOnly: true)
+        let config = ModelConfiguration(isStoredInMemoryOnly: true, cloudKitDatabase: .none)
         let container = try! ModelContainer(for: schema, configurations: [config])
 
         if withSampleData {

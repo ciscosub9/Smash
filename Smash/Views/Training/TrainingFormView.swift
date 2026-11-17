@@ -11,6 +11,10 @@ struct TrainingFormView: View {
     @State private var coach = ""
     @State private var selectedFocus: Set<String> = []
     @State private var drillsDescription = ""
+    @State private var drillSelection = ""
+    @State private var customDrill = ""
+    @State private var setsDone = 1
+    @State private var intensity: Intensity?
     @State private var notes = ""
     @State private var saved = false
 
@@ -76,6 +80,33 @@ struct TrainingFormView: View {
                 }
 
                 Section {
+                    Picker("Drill", selection: $drillSelection) {
+                        Text("None").tag("")
+                        ForEach(BadmintonDrill.presets, id: \.self) { preset in
+                            Text(preset).tag(preset)
+                        }
+                        Text("Custom…").tag(Self.customDrillSentinel)
+                    }
+                    if drillSelection == Self.customDrillSentinel {
+                        TextField("Drill name", text: $customDrill)
+                    }
+                    if isDrillSelected {
+                        Stepper("Sets done: \(setsDone)", value: $setsDone, in: 1...50)
+                            .sensoryFeedback(.selection, trigger: setsDone)
+                    }
+                    Picker("Difficulty", selection: $intensity) {
+                        Text("Not set").tag(Intensity?.none)
+                        ForEach(Intensity.allCases) { level in
+                            Text(level.label).tag(Intensity?.some(level))
+                        }
+                    }
+                } header: {
+                    Text("Drills")
+                } footer: {
+                    Text("The main drill of the session and how many sets you completed.")
+                }
+
+                Section {
                     TextField("e.g. Shadow footwork 3×10, half-court smash rallies, net kills…", text: $drillsDescription, axis: .vertical)
                         .lineLimit(3...8)
                 } header: {
@@ -107,6 +138,21 @@ struct TrainingFormView: View {
 
     // MARK: - Logic
 
+    /// Sentinel picker value for "type your own drill".
+    private static let customDrillSentinel = "__custom__"
+
+    private var isDrillSelected: Bool { drillSelection != "" }
+
+    /// The drill name to persist — preset, custom text, or nothing.
+    private var resolvedDrillName: String? {
+        if drillSelection.isEmpty { return nil }
+        if drillSelection == Self.customDrillSentinel {
+            let trimmed = customDrill.trimmingCharacters(in: .whitespaces)
+            return trimmed.isEmpty ? nil : trimmed
+        }
+        return drillSelection
+    }
+
     private var isValid: Bool {
         !selectedFocus.isEmpty || !drillsDescription.trimmingCharacters(in: .whitespaces).isEmpty
     }
@@ -130,12 +176,25 @@ struct TrainingFormView: View {
         coach = editing.coach ?? ""
         selectedFocus = Set(editing.focusAreas)
         drillsDescription = editing.drillsDescription
+        if let name = editing.drillName, !name.isEmpty {
+            if BadmintonDrill.presets.contains(name) {
+                drillSelection = name
+            } else {
+                drillSelection = Self.customDrillSentinel
+                customDrill = name
+            }
+            setsDone = editing.setsDone ?? 1
+        } else {
+            drillSelection = ""
+        }
+        intensity = editing.intensity
         notes = editing.notes ?? ""
     }
 
     private func save() {
         let coachName = coach.trimmingCharacters(in: .whitespaces)
         let drills = drillsDescription.trimmingCharacters(in: .whitespaces)
+        let drillName = resolvedDrillName
 
         if let editing {
             editing.date = date
@@ -143,6 +202,9 @@ struct TrainingFormView: View {
             editing.coach = coachName.isEmpty ? nil : coachName
             editing.focusAreas = Array(selectedFocus).sorted()
             editing.drillsDescription = drills
+            editing.drillName = drillName
+            editing.setsDone = drillName == nil ? nil : setsDone
+            editing.intensity = intensity
             editing.notes = notes.isEmpty ? nil : notes
         } else {
             context.insert(TrainingSession(
@@ -151,6 +213,9 @@ struct TrainingFormView: View {
                 coach: coachName.isEmpty ? nil : coachName,
                 focusAreas: Array(selectedFocus).sorted(),
                 drillsDescription: drills,
+                drillName: drillName,
+                setsDone: drillName == nil ? nil : setsDone,
+                intensity: intensity,
                 notes: notes.isEmpty ? nil : notes
             ))
         }

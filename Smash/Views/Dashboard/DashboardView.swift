@@ -8,7 +8,17 @@ struct DashboardView: View {
     @Query(sort: \TrainingSession.date, order: .reverse) private var trainingSessions: [TrainingSession]
     @Query(sort: \Match.date, order: .reverse) private var matches: [Match]
 
-    @State private var showSettings = false
+    /// Screenshots and UI tests can open Settings directly:
+    /// `simctl launch com.smashapp.smash -settings`
+    @State private var showSettings = CommandLine.arguments.contains("-settings")
+    @AppStorage(AppearancePreference.storageKey) private var appearanceRaw = AppearancePreference.system.rawValue
+    @Environment(\.colorScheme) private var systemColorScheme
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    /// The scheme actually in effect — an explicit preference, or the system's.
+    private var isDark: Bool {
+        (AppearancePreference(rawValue: appearanceRaw)?.colorScheme ?? systemColorScheme) == .dark
+    }
 
     var body: some View {
         NavigationStack {
@@ -25,12 +35,29 @@ struct DashboardView: View {
             .navigationTitle("Dashboard")
             .navigationBarTitleDisplayMode(.large)
             .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
+                ToolbarItemGroup(placement: .topBarTrailing) {
+                    // Quick light/dark switch — one tap, no dig through Settings.
+                    Button {
+                        appearanceRaw = (isDark ? AppearancePreference.light : .dark).rawValue
+                    } label: {
+                        Image(systemName: isDark ? "sun.max.fill" : "moon.fill")
+                            .contentTransition(.symbolEffect(.replace))
+                    }
+                    .animation(reduceMotion ? nil : .smooth(duration: 0.25), value: isDark)
+                    .sensoryFeedback(.selection, trigger: appearanceRaw)
+                    .accessibilityLabel(isDark ? "Switch to light mode" : "Switch to dark mode")
+
+                    Link(destination: AppLinks.buyMeACoffee) {
+                        Image(systemName: "cup.and.saucer.fill")
+                    }
+                    .accessibilityLabel("Buy me a coffee")
+
                     Button {
                         showSettings = true
                     } label: {
                         Image(systemName: "gearshape")
                     }
+                    .accessibilityLabel("Settings")
                 }
             }
             .sheet(isPresented: $showSettings) {

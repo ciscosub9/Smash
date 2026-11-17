@@ -46,6 +46,27 @@ enum Intensity: String, CaseIterable, Identifiable {
     }
 }
 
+/// Skill tiers — used for opponents on matches and for the player's own profile.
+enum SkillLevel: String, CaseIterable, Identifiable {
+    case beginner
+    case amateur
+    case intermediate
+    case advanced
+    case professional
+
+    var id: String { rawValue }
+
+    var label: String {
+        switch self {
+        case .beginner: "Beginner"
+        case .amateur: "Amateur"
+        case .intermediate: "Intermediate"
+        case .advanced: "Advanced"
+        case .professional: "Professional"
+        }
+    }
+}
+
 // MARK: - Match scoring
 
 enum PointSystem: String, CaseIterable, Identifiable {
@@ -162,6 +183,25 @@ enum Placement: String, CaseIterable, Identifiable {
         case .participated: 7
         }
     }
+}
+
+/// Common drill names offered as quick picks on the training form.
+/// Free text is still allowed — the list is a shortcut, not a cage.
+enum BadmintonDrill {
+    static let presets = [
+        "Shadow footwork",
+        "Multi-shuttle",
+        "Smash practice",
+        "Clear drills",
+        "Drop shots",
+        "Net shots",
+        "Serve accuracy",
+        "Defense drills",
+        "Footwork ladder",
+        "Wrist and grip",
+        "Conditioning",
+        "Match simulation",
+    ]
 }
 
 // MARK: - Training

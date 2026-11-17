@@ -4,6 +4,8 @@ import SwiftData
 /// A badminton tournament the user took part in, grouping related matches.
 @Model
 final class Tournament {
+    /// Stable identity for backups — survives export/import round-trips.
+    var id: UUID = UUID()
     var name: String = ""
     var typeRaw: String = TournamentType.roundRobin.rawValue
     var startDate: Date = Date()
@@ -12,8 +14,10 @@ final class Tournament {
     /// Tactics, game plans, lessons learned.
     var strategyNotes: String? = nil
 
+    /// Optional relationship is a CloudKit requirement (all relationships
+    /// must be optional). Use `matchList` for a non-optional view.
     @Relationship(deleteRule: .nullify)
-    var matches: [Match] = []
+    var matches: [Match]? = []
 
     init(
         name: String = "",
@@ -45,10 +49,13 @@ final class Tournament {
 // MARK: - Derived stats
 
 extension Tournament {
-    var wins: Int { matches.filter { MatchLogic.outcome($0) == .win }.count }
-    var losses: Int { matches.filter { MatchLogic.outcome($0) == .loss }.count }
-    var draws: Int { matches.filter { MatchLogic.outcome($0) == .draw }.count }
-    var winRate: Double { MatchLogic.winRate(of: matches) }
+    /// Non-optional view of the relationship.
+    var matchList: [Match] { matches ?? [] }
+
+    var wins: Int { matchList.filter { MatchLogic.outcome($0) == .win }.count }
+    var losses: Int { matchList.filter { MatchLogic.outcome($0) == .loss }.count }
+    var draws: Int { matchList.filter { MatchLogic.outcome($0) == .draw }.count }
+    var winRate: Double { MatchLogic.winRate(of: matchList) }
 
     /// "3 – 1" style record, ignoring draws.
     var recordDescription: String {

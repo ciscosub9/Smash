@@ -10,8 +10,7 @@ struct TournamentDetailView: View {
     @State private var confirmDelete = false
 
     private var sortedMatches: [Match] {
-        tournament.matches.sorted { $0.date > $1.date }
-    }
+        tournament.matchList.sorted { $0.date > $1.date }    }
 
     var body: some View {
         List {
@@ -36,7 +35,7 @@ struct TournamentDetailView: View {
                         resultStat("\(tournament.wins)", label: "Wins", tint: .green)
                         resultStat("\(tournament.losses)", label: "Losses", tint: .red)
                         resultStat(
-                            tournament.matches.isEmpty ? "–" : tournament.winRate.formatted(.percent),
+                            tournament.matchList.isEmpty ? "–" : tournament.winRate.formatted(.percent),
                             label: "Win rate",
                             tint: .blue
                         )

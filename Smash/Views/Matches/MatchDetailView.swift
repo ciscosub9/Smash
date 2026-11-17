@@ -35,8 +35,14 @@ struct MatchDetailView: View {
 
             Section("Details") {
                 LabeledContent("Opponent", value: match.opponent)
+                if let level = match.opponentLevel {
+                    LabeledContent("Opponent level", value: level.label)
+                }
                 LabeledContent("Discipline", value: match.discipline.label)
                 LabeledContent("Format", value: match.format.label)
+                if let intensity = match.intensity {
+                    LabeledContent("Intensity", value: intensity.label)
+                }
                 if let tournament = match.tournament {
                     NavigationLink {
                         TournamentDetailView(tournament: tournament)

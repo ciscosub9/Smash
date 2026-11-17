@@ -15,11 +15,13 @@ Track daily play, coaching sessions, matches with full scoring, and tournaments 
 ## Features
 
 - **Play** — log daily sessions with duration, discipline (singles / doubles / mixed), intensity, court, and who you played with.
-- **Training** — record coaching and drill sessions: what you worked on (footwork, smashes, net play…), with whom, and notes on what to repeat.
-- **Matches** — full score tracking with three point systems (15-point, 21-point rally, continuous) in single-game or best-of-3 format. Win rate is computed automatically per opponent and per scoring system.
+- **Training** — record coaching and drill sessions: pick the drill (presets or custom), sets completed, difficulty, focus areas, coach, and notes on what to repeat.
+- **Matches** — full score tracking with three point systems (15-point, 21-point rally, continuous) in single-game or best-of-3 format. Tag each match with intensity and opponent level (Beginner → Professional); win rate is computed automatically.
 - **Tournaments** — round robin, knockout, league, and ladder formats. Link matches to a tournament, track wins/losses and placement, and keep strategy notes.
-- **Dashboard** — weekly on-court time, streaks, win rate, and recent results at a glance (Swift Charts).
-- **Appearance** — Automatic (follows system), Light, or Dark, set in-app.
+- **Dashboard** — weekly on-court time, streaks, win rate, and recent results at a glance (Swift Charts). One-tap light/dark switch up top.
+- **Appearance** — Automatic (follows system), Light, or Dark — quick switch on the Dashboard, full control in Settings.
+- **Backup & import** — export all data as JSON from Settings, optionally encrypted with a password (PBKDF2 + AES-256-GCM). Import merges records back without overwriting anything.
+- **Player profile** — your name and skill level, kept alongside the same Beginner → Professional scale used for opponents.
 - **Your data, your choice** — store everything locally on device (default, private) or flip on iCloud sync in Settings. No accounts, no analytics, no tracking.
 
 ## Design
@@ -69,7 +71,7 @@ Smash/
 ## Roadmap
 
 - [ ] App icon & App Store assets
-- [ ] Export data (CSV / JSON)
+- [x] Export data (JSON, optional password encryption) · import merges back
 - [ ] Per-opponent history drill-down
 - [ ] Apple Watch companion
 - [ ] Widgets & App Intents shortcuts

@@ -79,7 +79,7 @@ private struct TournamentRow: View {
                 Text("\(tournament.wins)W – \(tournament.losses)L")
                     .monospacedDigit()
                 Text("·")
-                Text("\(tournament.matches.count) matches")
+                Text("\(tournament.matchList.count) matches")
                 Spacer()
                 Text(AppFormat.date(tournament.startDate))
                     .font(.caption)
