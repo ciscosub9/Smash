@@ -101,3 +101,87 @@ struct MatchLogicTests {
         )
     }
 }
+
+@Suite("Score validation")
+struct ScoreValidationTests {
+
+    // MARK: 21-point game
+
+    @Test("21-point: 21–20 is not a final score")
+    func twentyOneTwentyInvalid() {
+        #expect(!MatchLogic.isValidGame(myPoints: 21, opponentPoints: 20, pointSystem: .points21))
+    }
+
+    @Test("21-point: 22–20 is a deuce win")
+    func twentyTwoTwentyValid() {
+        #expect(MatchLogic.isValidGame(myPoints: 22, opponentPoints: 20, pointSystem: .points21))
+    }
+
+    @Test("21-point: 30–29 is valid at the cap")
+    func capValid() {
+        #expect(MatchLogic.isValidGame(myPoints: 30, opponentPoints: 29, pointSystem: .points21))
+        #expect(!MatchLogic.isValidGame(myPoints: 30, opponentPoints: 30, pointSystem: .points21))
+        #expect(!MatchLogic.isValidGame(myPoints: 31, opponentPoints: 20, pointSystem: .points21))
+    }
+
+    @Test("21-point: 29–28 is still one point short of the cap")
+    func nearCapInvalid() {
+        #expect(!MatchLogic.isValidGame(myPoints: 29, opponentPoints: 28, pointSystem: .points21))
+    }
+
+    // MARK: 15-point game
+
+    @Test("15-point: 15–14 invalid, 16–14 valid, 21–20 valid at the cap")
+    func fifteenPointRules() {
+        #expect(!MatchLogic.isValidGame(myPoints: 15, opponentPoints: 14, pointSystem: .points15))
+        #expect(MatchLogic.isValidGame(myPoints: 16, opponentPoints: 14, pointSystem: .points15))
+        #expect(MatchLogic.isValidGame(myPoints: 21, opponentPoints: 20, pointSystem: .points15))
+        #expect(!MatchLogic.isValidGame(myPoints: 22, opponentPoints: 20, pointSystem: .points15))
+    }
+
+    // MARK: Continuous and unplayed games
+
+    @Test("Continuous: any score, and 0–0 counts as unplayed")
+    func continuousRules() {
+        #expect(MatchLogic.isValidGame(myPoints: 57, opponentPoints: 41, pointSystem: .continuous))
+        #expect(MatchLogic.isValidGame(myPoints: 3, opponentPoints: 0, pointSystem: .continuous))
+        #expect(MatchLogic.isValidGame(myPoints: 0, opponentPoints: 0, pointSystem: .points21))
+    }
+
+    @Test("Best of 3: an unplayed third game is allowed")
+    func unplayedThirdGame() {
+        #expect(MatchLogic.invalidGameIndexes(
+            myGameScores: [21, 18, 0],
+            opponentGameScores: [15, 21, 0],
+            format: .bestOf3,
+            pointSystem: .points21
+        ).isEmpty)
+    }
+
+    @Test("Best of 3: the unfinished game is the one flagged")
+    func flagsOnlyBadGame() {
+        let indexes = MatchLogic.invalidGameIndexes(
+            myGameScores: [21, 21, 0],
+            opponentGameScores: [15, 20, 0],
+            format: .bestOf3,
+            pointSystem: .points21
+        )
+        #expect(indexes == [1])
+        #expect(MatchLogic.validationMessage(
+            myGameScores: [21, 21, 0],
+            opponentGameScores: [15, 20, 0],
+            format: .bestOf3,
+            pointSystem: .points21
+        )?.contains("Game 2") == true)
+    }
+
+    @Test("A match with no scores at all cannot be saved")
+    func emptyMatchInvalid() {
+        #expect(MatchLogic.validationMessage(
+            myGameScores: [0],
+            opponentGameScores: [0],
+            format: .singleGame,
+            pointSystem: .points21
+        )?.contains("at least one game") == true)
+    }
+}

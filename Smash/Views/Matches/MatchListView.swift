@@ -7,10 +7,29 @@ struct MatchListView: View {
 
     @State private var filter: PointSystem?
     @State private var showAdd = false
+    @State private var searchText = ""
 
     private var filtered: [Match] {
-        guard let filter else { return matches }
-        return matches.filter { $0.pointSystem == filter }
+        var result = matches
+        if let filter { result = result.filter { $0.pointSystem == filter } }
+        let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !query.isEmpty else { return result }
+        return result.filter { match in
+            match.opponent.localizedCaseInsensitiveContains(query)
+            || match.notes?.localizedCaseInsensitiveContains(query) == true
+            || match.tournament?.name.localizedCaseInsensitiveContains(query) == true
+            || match.discipline.label.localizedCaseInsensitiveContains(query)
+            || match.intensity?.label.localizedCaseInsensitiveContains(query) == true
+            || match.opponentLevel?.label.localizedCaseInsensitiveContains(query) == true
+        }
+    }
+
+    private var opponentRecords: [Record] {
+        Stats.recordsByOpponent(matches)
+    }
+
+    private var pointSystemRecords: [Record] {
+        PointSystem.allCases.map { Stats.record(for: $0, in: matches) }.filter { $0.total > 0 }
     }
 
     var body: some View {
@@ -25,15 +44,36 @@ struct MatchListView: View {
                     ) { showAdd = true }
                 } else {
                     List {
-                        ForEach(filtered) { match in
-                            NavigationLink(value: match) {
-                                MatchRow(match: match)
+                        if !opponentRecords.isEmpty || !pointSystemRecords.isEmpty {
+                            Section("Your record") {
+                                if !opponentRecords.isEmpty {
+                                    DisclosureGroup("By opponent") {
+                                        ForEach(opponentRecords) { record in
+                                            RecordRow(record: record)
+                                        }
+                                    }
+                                }
+                                if !pointSystemRecords.isEmpty {
+                                    DisclosureGroup("By point system") {
+                                        ForEach(pointSystemRecords) { record in
+                                            RecordRow(record: record)
+                                        }
+                                    }
+                                }
                             }
-                            .swipeActions(edge: .trailing) {
-                                Button(role: .destructive) {
-                                    context.delete(match)
-                                } label: {
-                                    Label("Delete", systemImage: "trash")
+                        }
+
+                        Section("All matches") {
+                            ForEach(filtered) { match in
+                                NavigationLink(value: match) {
+                                    MatchRow(match: match)
+                                }
+                                .swipeActions(edge: .trailing) {
+                                    Button(role: .destructive) {
+                                        context.delete(match)
+                                    } label: {
+                                        Label("Delete", systemImage: "trash")
+                                    }
                                 }
                             }
                         }
@@ -42,6 +82,7 @@ struct MatchListView: View {
                 }
             }
             .navigationTitle("Matches")
+            .searchable(text: $searchText, prompt: "Opponent, notes, tournament…")
             .navigationDestination(for: Match.self) { match in
                 MatchDetailView(match: match)
             }
@@ -104,7 +145,7 @@ struct MatchRow: View {
                         .foregroundStyle(.orange)
                 }
                 Spacer()
-                Text(AppFormat.date(match.date))
+                Text(AppFormat.dateTime(match.date))
                     .font(.caption)
                     .foregroundStyle(.tertiary)
             }
@@ -122,4 +163,27 @@ struct MatchRow: View {
 #Preview {
     MatchListView()
         .modelContainer(PreviewContainer.container)
+}
+
+// MARK: - Records
+
+private struct RecordRow: View {
+    let record: Record
+
+    var body: some View {
+        HStack {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(record.label)
+                    .font(.subheadline.weight(.medium))
+                Text("\(record.wins)W · \(record.losses)L\(record.draws > 0 ? " · \(record.draws)D" : "")")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            Spacer()
+            Text(record.winRate.formatted(.percent.precision(.fractionLength(0))))
+                .font(.system(.subheadline, design: .rounded, weight: .semibold))
+                .foregroundStyle(record.winRate >= 0.5 ? .green : .orange)
+                .monospacedDigit()
+        }
+    }
 }

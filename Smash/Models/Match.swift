@@ -137,6 +137,94 @@ nonisolated enum MatchLogic {
         return .draw
     }
 
+    // MARK: - Score validation
+
+    /// Whether one game's score is a legal final score under the chosen rules.
+    ///
+    /// - 21-point game: reach 21 and lead by 2, or hit the 30-point cap.
+    /// - 15-point game: reach 15 and lead by 2, or hit the 21-point cap.
+    /// - Continuous: no cap, any score is fine.
+    /// - `0 – 0` is treated as an unplayed game (valid in a best-of-3).
+    static func isValidGame(
+        myPoints: Int,
+        opponentPoints: Int,
+        pointSystem: PointSystem
+    ) -> Bool {
+        guard myPoints >= 0, opponentPoints >= 0 else { return false }
+        if myPoints == 0, opponentPoints == 0 { return true }
+
+        guard let target = pointSystem.targetPoints,
+              let cap = pointSystem.capPoints else { return true }
+
+        guard myPoints <= cap, opponentPoints <= cap else { return false }
+
+        let winner = max(myPoints, opponentPoints)
+        let loser = min(myPoints, opponentPoints)
+        let wonByTwo = winner - loser >= 2
+        let reachedCap = winner == cap && loser < cap
+        return winner >= target && (wonByTwo || reachedCap)
+    }
+
+    /// Indexes of games that still need a legal final score. Empty means valid.
+    static func invalidGameIndexes(
+        myGameScores: [Int],
+        opponentGameScores: [Int],
+        format: MatchFormat,
+        pointSystem: PointSystem
+    ) -> [Int] {
+        let mine = Array(myGameScores.prefix(format.gameCount))
+        let theirs = Array(opponentGameScores.prefix(format.gameCount))
+        let played = Array(mine.indices).filter { mine[$0] > 0 || theirs[$0] > 0 }
+        guard !played.isEmpty else { return Array(mine.indices) }
+
+        return played.filter { index in
+            !isValidGame(
+                myPoints: mine[index],
+                opponentPoints: theirs[index],
+                pointSystem: pointSystem
+            )
+        }
+    }
+
+    /// A plain-language reason the score can't be saved yet, if any.
+    static func validationMessage(
+        myGameScores: [Int],
+        opponentGameScores: [Int],
+        format: MatchFormat,
+        pointSystem: PointSystem
+    ) -> String? {
+        let mine = Array(myGameScores.prefix(format.gameCount))
+        let theirs = Array(opponentGameScores.prefix(format.gameCount))
+        let invalid = invalidGameIndexes(
+            myGameScores: mine,
+            opponentGameScores: theirs,
+            format: format,
+            pointSystem: pointSystem
+        )
+        guard let first = invalid.first else { return nil }
+
+        if invalid.count == mine.count {
+            return "Enter a final score for at least one game."
+        }
+        let rule: String
+        switch pointSystem {
+        case .points15: rule = "reach 15 and win by 2 (cap 21)"
+        case .points21: rule = "reach 21 and win by 2 (cap 30)"
+        case .continuous: rule = "any score"
+        }
+        return "Game \(first + 1): \(mine[first])–\(theirs[first]) isn't a final score. To finish, \(rule)."
+    }
+
+    /// Convenience for a saved match.
+    static func isValid(_ match: Match) -> Bool {
+        validationMessage(
+            myGameScores: match.myGameScores,
+            opponentGameScores: match.opponentGameScores,
+            format: match.format,
+            pointSystem: match.pointSystem
+        ) == nil
+    }
+
     /// Win rate across a set of matches, as a fraction in 0...1.
     /// Draws count as non-wins in the denominator.
     static func winRate(of matches: [Match]) -> Double {

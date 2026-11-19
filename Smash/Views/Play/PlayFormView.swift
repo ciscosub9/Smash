@@ -26,7 +26,7 @@ struct PlayFormView: View {
         NavigationStack {
             Form {
                 Section {
-                    DatePicker("Date", selection: $date, displayedComponents: .date)
+                    DatePicker("When", selection: $date)
                     VStack(alignment: .leading, spacing: 4) {
                         HStack {
                             Text("Duration")
@@ -35,15 +35,7 @@ struct PlayFormView: View {
                                 .foregroundStyle(.secondary)
                                 .monospacedDigit()
                         }
-                        Slider(
-                            value: Binding(
-                                get: { Double(durationMinutes) },
-                                set: { durationMinutes = Int(($0 / 15).rounded()) * 15 }
-                            ),
-                            in: 15...240,
-                            step: 15
-                        )
-                        .sensoryFeedback(.selection, trigger: durationMinutes)
+                        DurationPicker(totalMinutes: $durationMinutes)
                     }
                 }
 

@@ -6,7 +6,7 @@ import Foundation
 // they stay CloudKit-compatible and usable in SwiftData predicates. Each model
 // exposes a typed computed accessor over the raw property.
 
-enum Discipline: String, CaseIterable, Identifiable {
+nonisolated enum Discipline: String, CaseIterable, Identifiable {
     case singles
     case doubles
     case mixedDoubles
@@ -30,7 +30,7 @@ enum Discipline: String, CaseIterable, Identifiable {
     }
 }
 
-enum Intensity: String, CaseIterable, Identifiable {
+nonisolated enum Intensity: String, CaseIterable, Identifiable {
     case easy
     case moderate
     case hard
@@ -47,7 +47,7 @@ enum Intensity: String, CaseIterable, Identifiable {
 }
 
 /// Skill tiers — used for opponents on matches and for the player's own profile.
-enum SkillLevel: String, CaseIterable, Identifiable {
+nonisolated enum SkillLevel: String, CaseIterable, Identifiable {
     case beginner
     case amateur
     case intermediate
@@ -69,7 +69,7 @@ enum SkillLevel: String, CaseIterable, Identifiable {
 
 // MARK: - Match scoring
 
-enum PointSystem: String, CaseIterable, Identifiable {
+nonisolated enum PointSystem: String, CaseIterable, Identifiable {
     /// Traditional 15-point system (side-in scoring era).
     case points15
     /// Modern rally-point system, games to 21.
@@ -89,14 +89,32 @@ enum PointSystem: String, CaseIterable, Identifiable {
 
     var summary: String {
         switch self {
-        case .points15: "Games to 15"
-        case .points21: "Games to 21, rally point"
+        case .points15: "Games to 15 · win by 2 · cap at 21"
+        case .points21: "Games to 21 · win by 2 · cap at 30"
         case .continuous: "One long game, no cap"
+        }
+    }
+
+    /// Points needed to win a game. `nil` for continuous play.
+    var targetPoints: Int? {
+        switch self {
+        case .points15: 15
+        case .points21: 21
+        case .continuous: nil
+        }
+    }
+
+    /// Hard ceiling on a game's score. `nil` for continuous play.
+    var capPoints: Int? {
+        switch self {
+        case .points15: 21
+        case .points21: 30
+        case .continuous: nil
         }
     }
 }
 
-enum MatchFormat: String, CaseIterable, Identifiable {
+nonisolated enum MatchFormat: String, CaseIterable, Identifiable {
     case singleGame
     case bestOf3
 
@@ -119,7 +137,7 @@ enum MatchFormat: String, CaseIterable, Identifiable {
 
 // MARK: - Tournament
 
-enum TournamentType: String, CaseIterable, Identifiable {
+nonisolated enum TournamentType: String, CaseIterable, Identifiable {
     case roundRobin
     case knockout
     case league
@@ -149,7 +167,7 @@ enum TournamentType: String, CaseIterable, Identifiable {
     }
 }
 
-enum Placement: String, CaseIterable, Identifiable {
+nonisolated enum Placement: String, CaseIterable, Identifiable {
     case champion
     case runnerUp
     case third
@@ -187,7 +205,7 @@ enum Placement: String, CaseIterable, Identifiable {
 
 /// Common drill names offered as quick picks on the training form.
 /// Free text is still allowed — the list is a shortcut, not a cage.
-enum BadmintonDrill {
+nonisolated enum BadmintonDrill {
     static let presets = [
         "Shadow footwork",
         "Multi-shuttle",
@@ -207,7 +225,7 @@ enum BadmintonDrill {
 // MARK: - Training
 
 /// Common focus areas offered as quick chips on the training form.
-enum TrainingFocus: String, CaseIterable, Identifiable {
+nonisolated enum TrainingFocus: String, CaseIterable, Identifiable {
     case footwork
     case clears
     case smashes

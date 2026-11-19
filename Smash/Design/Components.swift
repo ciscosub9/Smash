@@ -14,12 +14,65 @@ enum AppFormat {
         formatter.string(from: date)
     }
 
+    /// "Mon 16 Sep, 6:30 PM" style date + time label.
+    static func dateTime(_ date: Date) -> String {
+        dateTimeFormatter.string(from: date)
+    }
+
     private static let formatter: DateFormatter = {
         let formatter = DateFormatter()
         formatter.dateStyle = .medium
         formatter.timeStyle = .none
         return formatter
     }()
+
+    private static let dateTimeFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
+        formatter.timeStyle = .short
+        return formatter
+    }()
+}
+
+/// Hours + minutes picker used for session and training durations.
+struct DurationPicker: View {
+    @Binding var totalMinutes: Int
+    var hourRange: ClosedRange<Int> = 0...8
+    var minuteStep: Int = 5
+
+    private var hours: Int { totalMinutes / 60 }
+    private var minutes: Int { totalMinutes % 60 }
+
+    var body: some View {
+        HStack(spacing: 0) {
+            Picker("Hours", selection: Binding(
+                get: { hours },
+                set: { totalMinutes = max(minuteStep, $0 * 60 + minutes) }
+            )) {
+                ForEach(hourRange, id: \.self) { hour in
+                    Text("\(hour) h").tag(hour)
+                }
+            }
+            .pickerStyle(.wheel)
+            .frame(maxWidth: .infinity)
+            .clipped()
+
+            Picker("Minutes", selection: Binding(
+                get: { (minutes / minuteStep) * minuteStep },
+                set: { totalMinutes = max(minuteStep, hours * 60 + $0) }
+            )) {
+                ForEach(Array(stride(from: 0, through: 55, by: minuteStep)), id: \.self) { minute in
+                    Text("\(minute) m").tag(minute)
+                }
+            }
+            .pickerStyle(.wheel)
+            .frame(maxWidth: .infinity)
+            .clipped()
+        }
+        .frame(height: 120)
+        .sensoryFeedback(.selection, trigger: totalMinutes)
+        .accessibilityElement(children: .contain)
+    }
 }
 
 // MARK: - Press feedback

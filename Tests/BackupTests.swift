@@ -28,15 +28,20 @@ struct BackupTests {
         PlayerGoal.kind = .weekly
         PlayerGoal.target = 5
 
+        let sourceMatches = try source.mainContext.fetch(FetchDescriptor<Match>())
+        let sourcePlay = try source.mainContext.fetch(FetchDescriptor<PlaySession>())
+        let sourceTraining = try source.mainContext.fetch(FetchDescriptor<TrainingSession>())
+        let sourceTournaments = try source.mainContext.fetch(FetchDescriptor<Tournament>())
+
         let data = try Backup.exportData(context: source.mainContext)
 
         let destination = makeContainer()
         let summary = try Backup.importData(data, into: destination.mainContext)
 
-        #expect(summary.matches == 3)
-        #expect(summary.playSessions == 4)
-        #expect(summary.trainingSessions == 2)
-        #expect(summary.tournaments == 1)
+        #expect(summary.matches == sourceMatches.count)
+        #expect(summary.playSessions == sourcePlay.count)
+        #expect(summary.trainingSessions == sourceTraining.count)
+        #expect(summary.tournaments == sourceTournaments.count)
 
         // The goal rides along in the backup.
         #expect(PlayerGoal.kind == .weekly)
@@ -44,15 +49,15 @@ struct BackupTests {
         PlayerGoal.kind = .none
 
         let importedMatches = try destination.mainContext.fetch(FetchDescriptor<Match>())
-        #expect(importedMatches.count == 3)
+        #expect(importedMatches.count == sourceMatches.count)
 
         // Tournament ↔ match link survives the trip.
-        let linked = importedMatches.first { $0.tournament != nil }
-        #expect(linked?.tournament?.name == "Club Open 2026")
-
-        // New per-record fields survive too.
-        #expect(linked?.opponentLevel == .intermediate)
-        #expect(linked?.intensity == .hard)
+        let clubOpenMatch = importedMatches.first {
+            $0.tournament?.name == "Club Open 2026" && $0.opponent == "Ravi"
+        }
+        #expect(clubOpenMatch != nil)
+        #expect(clubOpenMatch?.opponentLevel == .intermediate)
+        #expect(clubOpenMatch?.intensity == .hard)
 
         let importedTraining = try destination.mainContext.fetch(FetchDescriptor<TrainingSession>())
         #expect(importedTraining.contains { $0.drillName == "Multi-shuttle" && $0.setsDone == 6 && $0.intensity == .hard })

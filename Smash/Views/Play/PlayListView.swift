@@ -6,6 +6,19 @@ struct PlayListView: View {
     @Query(sort: \PlaySession.date, order: .reverse) private var sessions: [PlaySession]
 
     @State private var showAdd = false
+    @State private var searchText = ""
+
+    private var filtered: [PlaySession] {
+        let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !query.isEmpty else { return sessions }
+        return sessions.filter { session in
+            session.opponents.contains(where: { $0.localizedCaseInsensitiveContains(query) })
+            || session.location?.localizedCaseInsensitiveContains(query) == true
+            || session.notes?.localizedCaseInsensitiveContains(query) == true
+            || session.discipline.label.localizedCaseInsensitiveContains(query)
+            || session.intensity?.label.localizedCaseInsensitiveContains(query) == true
+        }
+    }
 
     var body: some View {
         NavigationStack {
@@ -17,9 +30,11 @@ struct PlayListView: View {
                         message: "Track your daily badminton — hours on court, who you played with, how it felt.",
                         actionTitle: "Log session"
                     ) { showAdd = true }
+                } else if filtered.isEmpty {
+                    ContentUnavailableView.search(text: searchText)
                 } else {
                     List {
-                        ForEach(sessions) { session in
+                        ForEach(filtered) { session in
                             PlayRow(session: session)
                         }
                         .onDelete(perform: delete)
@@ -28,6 +43,7 @@ struct PlayListView: View {
                 }
             }
             .navigationTitle("Play")
+            .searchable(text: $searchText, prompt: "Opponent, location, notes…")
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {
@@ -45,7 +61,7 @@ struct PlayListView: View {
 
     private func delete(at offsets: IndexSet) {
         for index in offsets {
-            context.delete(sessions[index])
+            context.delete(filtered[index])
         }
     }
 }
@@ -59,7 +75,7 @@ private struct PlayRow: View {
                 Label(AppFormat.duration(minutes: session.durationMinutes), systemImage: "clock")
                     .font(.headline)
                 Spacer()
-                Text(AppFormat.date(session.date))
+                Text(AppFormat.dateTime(session.date))
                     .font(.caption)
                     .foregroundStyle(.tertiary)
             }

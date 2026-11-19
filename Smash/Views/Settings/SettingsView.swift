@@ -25,6 +25,10 @@ struct SettingsView: View {
     @State private var pendingEncrypted: Data?
     @State private var importPassword = ""
 
+    // Storage migration
+    @State private var pendingStorageMode: SyncMode?
+    @State private var migratingStorage = false
+
     // Alerts
     @State private var importResult: String?
     @State private var errorMessage: String?
@@ -93,6 +97,26 @@ struct SettingsView: View {
             } message: {
                 Text(errorMessage ?? "")
             }
+            .confirmationDialog(
+                pendingStorageMode == .iCloud ? "Move data to iCloud?" : "Move data to this iPhone?",
+                isPresented: Binding(
+                    get: { pendingStorageMode != nil },
+                    set: { if !$0 { pendingStorageMode = nil } }
+                ),
+                titleVisibility: .visible
+            ) {
+                Button("Move data") { performMigration() }
+                Button("Cancel", role: .cancel) { pendingStorageMode = nil }
+            } message: {
+                Text("Your current play, training, matches and tournaments will be copied to \(pendingStorageMode?.label ?? "the other storage"). The two stores stay separate after this.")
+            }
+            .overlay {
+                if migratingStorage {
+                    ProgressView("Moving your data…")
+                        .padding(20)
+                        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16))
+                }
+            }
         }
     }
 
@@ -146,9 +170,12 @@ struct SettingsView: View {
     }
 
     @ViewBuilder private var storageSection: some View {
-        Section {            Picker("Storage", selection: Binding(
+        Section {
+            Picker("Storage", selection: Binding(
                 get: { store.syncMode },
-                set: { store.switchMode($0) }
+                set: { newMode in
+                    if newMode != store.syncMode { pendingStorageMode = newMode }
+                }
             )) {
                 ForEach(SyncMode.allCases, id: \.self) { mode in
                     Text(mode.label).tag(mode)
@@ -156,6 +183,7 @@ struct SettingsView: View {
             }
             .pickerStyle(.inline)
             .labelsHidden()
+            .disabled(migratingStorage)
 
             Text(store.syncMode.description)
                 .font(.footnote)
@@ -163,10 +191,10 @@ struct SettingsView: View {
         } header: {
             Text("Storage")
         } footer: {
-            Text("Records stay in the storage they were created in — switching doesn't move existing data between this iPhone and iCloud.")
+            Text("Switching copies your current data to the selected storage so you can move between this device and iCloud without losing anything.")
         }
 
-        if store.syncMode == .iCloud && store.iCloudUnavailable {
+        if store.iCloudUnavailable {
             Section {
                 Label(
                     "iCloud isn't available for Smash right now. Check that you're signed in to iCloud; if you built the app yourself, make sure the iCloud capability is enabled with your team.",
@@ -174,6 +202,24 @@ struct SettingsView: View {
                 )
                 .font(.footnote)
                 .foregroundStyle(.orange)
+            }
+        }
+    }
+
+    private func performMigration() {
+        guard let mode = pendingStorageMode else { return }
+        pendingStorageMode = nil
+        migratingStorage = true
+        Task { @MainActor in
+            defer { migratingStorage = false }
+            do {
+                if let summary = try store.migrate(to: mode, from: context) {
+                    importResult = "Moved to \(mode.label). \(summary.description)"
+                } else if store.iCloudUnavailable {
+                    errorMessage = "iCloud isn't available for Smash right now. Your data stayed on \(store.syncMode.label)."
+                }
+            } catch {
+                errorMessage = error.localizedDescription
             }
         }
     }

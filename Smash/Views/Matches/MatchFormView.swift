@@ -96,7 +96,8 @@ struct MatchFormView: View {
                             opponentScore: Binding(
                                 get: { opponentScores[index] },
                                 set: { opponentScores[index] = $0 }
-                            )
+                            ),
+                            maximum: pointSystem.capPoints ?? 999
                         )
                     }
                     HStack {
@@ -107,11 +108,18 @@ struct MatchFormView: View {
                 } header: {
                     Text("Score")
                 } footer: {
-                    Text(scoreFooter)
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(scoreFooter)
+                        if let scoreMessage {
+                            Label(scoreMessage, systemImage: "exclamationmark.circle")
+                                .foregroundStyle(.orange)
+                        }
+                    }
+                    .font(.footnote)
                 }
 
                 Section("Details") {
-                    DatePicker("Date", selection: $date, displayedComponents: .date)
+                    DatePicker("When", selection: $date)
                     Picker("Tournament", selection: $selectedTournament) {
                         Text("None").tag(Tournament?.none)
                         ForEach(tournaments) { tournament in
@@ -157,11 +165,16 @@ struct MatchFormView: View {
     private var gameCount: Int { format.gameCount }
 
     private var isValid: Bool {
-        !opponent.trimmingCharacters(in: .whitespaces).isEmpty && totalPointsEntered > 0
+        !opponent.trimmingCharacters(in: .whitespaces).isEmpty && scoreMessage == nil
     }
 
-    private var totalPointsEntered: Int {
-        myScores.reduce(0, +) + opponentScores.reduce(0, +)
+    private var scoreMessage: String? {
+        MatchLogic.validationMessage(
+            myGameScores: Array(myScores.prefix(gameCount)),
+            opponentGameScores: Array(opponentScores.prefix(gameCount)),
+            format: format,
+            pointSystem: pointSystem
+        )
     }
 
     private var liveOutcome: MatchOutcome {
@@ -257,6 +270,7 @@ private struct GameScoreRow: View {
     let gameNumber: Int
     @Binding var myScore: Int
     @Binding var opponentScore: Int
+    let maximum: Int
 
     var body: some View {
         HStack {
@@ -264,8 +278,8 @@ private struct GameScoreRow: View {
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
             Spacer()
-            ScoreStepper(label: "You", score: $myScore, tint: .green)
-            ScoreStepper(label: "Them", score: $opponentScore, tint: .red)
+            ScoreStepper(label: "You", score: $myScore, tint: .green, maximum: maximum)
+            ScoreStepper(label: "Them", score: $opponentScore, tint: .red, maximum: maximum)
         }
     }
 }
@@ -276,6 +290,7 @@ struct ScoreStepper: View {
     let label: String
     @Binding var score: Int
     let tint: Color
+    var maximum: Int = 999
 
     var body: some View {
         HStack(spacing: 8) {
@@ -299,7 +314,9 @@ struct ScoreStepper: View {
                 .frame(minWidth: 28)
 
             Button {
-                score += 1
+                // Never increase past the system's cap. An older score above
+                // the cap (from before the rules were added) is left alone.
+                score = min(score + 1, max(maximum, score))
             } label: {
                 Image(systemName: "plus.circle.fill")
                     .foregroundStyle(tint)

@@ -6,6 +6,18 @@ struct TournamentListView: View {
     @Query(sort: \Tournament.startDate, order: .reverse) private var tournaments: [Tournament]
 
     @State private var showAdd = false
+    @State private var searchText = ""
+
+    private var filtered: [Tournament] {
+        let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !query.isEmpty else { return tournaments }
+        return tournaments.filter { tournament in
+            tournament.name.localizedCaseInsensitiveContains(query)
+            || tournament.strategyNotes?.localizedCaseInsensitiveContains(query) == true
+            || tournament.type.label.localizedCaseInsensitiveContains(query)
+            || tournament.placement?.label.localizedCaseInsensitiveContains(query) == true
+        }
+    }
 
     var body: some View {
         NavigationStack {
@@ -17,9 +29,11 @@ struct TournamentListView: View {
                         message: "Track the tournaments you play — round robin, knockout — with your placement and the matches inside them.",
                         actionTitle: "Add tournament"
                     ) { showAdd = true }
+                } else if filtered.isEmpty {
+                    ContentUnavailableView.search(text: searchText)
                 } else {
                     List {
-                        ForEach(tournaments) { tournament in
+                        ForEach(filtered) { tournament in
                             NavigationLink(value: tournament) {
                                 TournamentRow(tournament: tournament)
                             }
@@ -36,6 +50,7 @@ struct TournamentListView: View {
                 }
             }
             .navigationTitle("Tournaments")
+            .searchable(text: $searchText, prompt: "Name, type, placement, notes…")
             .navigationDestination(for: Tournament.self) { tournament in
                 TournamentDetailView(tournament: tournament)
             }

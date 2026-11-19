@@ -111,6 +111,57 @@ enum Stats {
             + training.filter { interval.contains($0.date) }.count
     }
 
+    /// The calendar interval for the user's goal cadence at `date`.
+    static func interval(
+        for kind: GoalKind,
+        at date: Date = .now,
+        calendar: Calendar = .current
+    ) -> DateInterval? {
+        switch kind {
+        case .none: return nil
+        case .weekly: return calendar.dateInterval(of: .weekOfYear, for: date)
+        case .monthly: return calendar.dateInterval(of: .month, for: date)
+        }
+    }
+
+    /// Consecutive weeks (or months) in which the activity goal was met.
+    ///
+    /// An unfinished current period doesn't break the streak: if this week
+    /// isn't complete yet, counting starts from last week.
+    static func goalStreak(
+        play: [PlaySession],
+        training: [TrainingSession],
+        kind: GoalKind,
+        target: Int,
+        calendar: Calendar = .current,
+        now: Date = .now
+    ) -> Int {
+        guard kind != .none, target > 0 else { return 0 }
+
+        let component: Calendar.Component = kind == .weekly ? .weekOfYear : .month
+        func met(_ interval: DateInterval) -> Bool {
+            sessions(play: play, training: training, in: interval) >= target
+        }
+        func previous(_ interval: DateInterval) -> DateInterval? {
+            guard let start = calendar.date(byAdding: component, value: -1, to: interval.start) else { return nil }
+            return calendar.dateInterval(of: component, for: start)
+        }
+
+        guard var interval = Self.interval(for: kind, at: now, calendar: calendar) else { return 0 }
+        if !met(interval) {
+            guard let earlier = previous(interval) else { return 0 }
+            interval = earlier
+        }
+
+        var streak = 0
+        while met(interval), streak < 1200 {
+            streak += 1
+            guard let earlier = previous(interval) else { break }
+            interval = earlier
+        }
+        return streak
+    }
+
     // MARK: Matches
 
     /// All distinct opponents across matches, alphabetically.

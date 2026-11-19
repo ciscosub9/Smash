@@ -179,4 +179,68 @@ struct GoalProgressTests {
 
         #expect(Stats.sessions(play: play, training: [], in: month) == 2)
     }
+
+    @Test("Goal streak counts consecutive periods, ignoring an unfinished current period")
+    func goalStreakCountsConsecutivePeriods() {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "UTC")!
+        calendar.firstWeekday = 2 // Monday
+
+        // Wednesday, so the current week is still in progress.
+        let now = calendar.date(from: DateComponents(year: 2026, month: 11, day: 18, hour: 12))!
+        let thisWeek = calendar.dateInterval(of: .weekOfYear, for: now)!
+        let lastWeek = calendar.date(byAdding: .weekOfYear, value: -1, to: thisWeek.start)!
+        let twoWeeksAgo = calendar.date(byAdding: .weekOfYear, value: -2, to: thisWeek.start)!
+        let threeWeeksAgo = calendar.date(byAdding: .weekOfYear, value: -3, to: thisWeek.start)!
+
+        func sessions(in weekStart: Date, count: Int) -> [PlaySession] {
+            (0..<count).map { offset in
+                PlaySession(date: calendar.date(byAdding: .day, value: offset, to: weekStart)!, durationMinutes: 60)
+            }
+        }
+
+        // Target 2/week. Current week only has 1 so far (unfinished) — streak
+        // should start at last week and count back: last week met, two weeks met,
+        // three weeks ago missed => streak 2.
+        let play = sessions(in: thisWeek.start, count: 1)
+            + sessions(in: lastWeek, count: 3)
+            + sessions(in: twoWeeksAgo, count: 2)
+            + sessions(in: threeWeeksAgo, count: 0)
+
+        #expect(Stats.goalStreak(
+            play: play,
+            training: [],
+            kind: .weekly,
+            target: 2,
+            calendar: calendar,
+            now: now
+        ) == 2)
+    }
+
+    @Test("Goal streak includes the current period once the target is met")
+    func goalStreakIncludesCurrentPeriod() {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "UTC")!
+        calendar.firstWeekday = 2
+
+        let now = calendar.date(from: DateComponents(year: 2026, month: 11, day: 18, hour: 12))!
+        let thisWeek = calendar.dateInterval(of: .weekOfYear, for: now)!
+        let lastWeek = calendar.date(byAdding: .weekOfYear, value: -1, to: thisWeek.start)!
+
+        let play = [
+            PlaySession(date: thisWeek.start),
+            PlaySession(date: calendar.date(byAdding: .day, value: 1, to: thisWeek.start)!),
+            PlaySession(date: lastWeek),
+            PlaySession(date: calendar.date(byAdding: .day, value: 2, to: lastWeek)!),
+        ]
+
+        #expect(Stats.goalStreak(
+            play: play,
+            training: [],
+            kind: .weekly,
+            target: 2,
+            calendar: calendar,
+            now: now
+        ) == 2)
+    }
 }

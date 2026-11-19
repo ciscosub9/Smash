@@ -13,7 +13,7 @@ struct MatchDetailView: View {
                 HStack {
                     OutcomeBadge(outcome: MatchLogic.outcome(match))
                     Spacer()
-                    Text(AppFormat.date(match.date))
+                    Text(AppFormat.dateTime(match.date))
                         .foregroundStyle(.secondary)
                 }
             }

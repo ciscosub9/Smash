@@ -6,6 +6,20 @@ struct TrainingListView: View {
     @Query(sort: \TrainingSession.date, order: .reverse) private var sessions: [TrainingSession]
 
     @State private var showAdd = false
+    @State private var searchText = ""
+
+    private var filtered: [TrainingSession] {
+        let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !query.isEmpty else { return sessions }
+        return sessions.filter { session in
+            session.coach?.localizedCaseInsensitiveContains(query) == true
+            || session.focusAreas.contains(where: { $0.localizedCaseInsensitiveContains(query) })
+            || session.drillsDescription.localizedCaseInsensitiveContains(query)
+            || session.drillName?.localizedCaseInsensitiveContains(query) == true
+            || session.notes?.localizedCaseInsensitiveContains(query) == true
+            || session.intensity?.label.localizedCaseInsensitiveContains(query) == true
+        }
+    }
 
     var body: some View {
         NavigationStack {
@@ -17,9 +31,11 @@ struct TrainingListView: View {
                         message: "Log coaching and drills — footwork, clears, smashes — and see what you've been working on.",
                         actionTitle: "Log training"
                     ) { showAdd = true }
+                } else if filtered.isEmpty {
+                    ContentUnavailableView.search(text: searchText)
                 } else {
                     List {
-                        ForEach(sessions) { session in
+                        ForEach(filtered) { session in
                             TrainingRow(session: session)
                         }
                         .onDelete(perform: delete)
@@ -28,6 +44,7 @@ struct TrainingListView: View {
                 }
             }
             .navigationTitle("Training")
+            .searchable(text: $searchText, prompt: "Coach, drill, focus, notes…")
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {
@@ -45,7 +62,7 @@ struct TrainingListView: View {
 
     private func delete(at offsets: IndexSet) {
         for index in offsets {
-            context.delete(sessions[index])
+            context.delete(filtered[index])
         }
     }
 }
@@ -59,7 +76,7 @@ private struct TrainingRow: View {
                 Label(AppFormat.duration(minutes: session.durationMinutes), systemImage: "clock")
                     .font(.headline)
                 Spacer()
-                Text(AppFormat.date(session.date))
+                Text(AppFormat.dateTime(session.date))
                     .font(.caption)
                     .foregroundStyle(.tertiary)
             }

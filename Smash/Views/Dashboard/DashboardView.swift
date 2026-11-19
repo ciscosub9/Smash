@@ -11,6 +11,7 @@ struct DashboardView: View {
     /// Screenshots and UI tests can open Settings directly:
     /// `simctl launch com.smashapp.smash -settings`
     @State private var showSettings = CommandLine.arguments.contains("-settings")
+    @State private var showSearch = false
     @AppStorage(AppearancePreference.storageKey) private var appearanceRaw = AppearancePreference.system.rawValue
     @AppStorage(PlayerGoal.kindKey) private var goalKindRaw = GoalKind.none.rawValue
     @AppStorage(PlayerGoal.targetKey) private var goalTarget = 3
@@ -41,6 +42,13 @@ struct DashboardView: View {
             .navigationBarTitleDisplayMode(.large)
             .toolbar {
                 ToolbarItemGroup(placement: .topBarTrailing) {
+                    Button {
+                        showSearch = true
+                    } label: {
+                        Image(systemName: "magnifyingglass")
+                    }
+                    .accessibilityLabel("Search everything")
+
                     // Quick light/dark switch — one tap, no dig through Settings.
                     Button {
                         appearanceRaw = (isDark ? AppearancePreference.light : .dark).rawValue
@@ -68,6 +76,9 @@ struct DashboardView: View {
             .sheet(isPresented: $showSettings) {
                 SettingsView()
             }
+            .sheet(isPresented: $showSearch) {
+                GlobalSearchView()
+            }
         }
     }
 
@@ -90,8 +101,14 @@ struct DashboardView: View {
                 tint: .green
             )
             StatCard(
-                title: "Streak",
-                value: streakLabel,
+                title: "Goal streak",
+                value: goalStreakLabel,
+                symbol: "target",
+                tint: .teal
+            )
+            StatCard(
+                title: "Match streak",
+                value: matchStreakLabel,
                 symbol: "flame",
                 tint: .orange
             )
@@ -110,13 +127,24 @@ struct DashboardView: View {
         }
     }
 
-    private var streakLabel: String {
-        if let streak = Stats.currentStreak(matches) {
-            let kind = streak.kind == .win ? "W" : "L"
-            return "\(streak.count)\(kind)"
-        }
-        let days = Stats.activityStreak(play: playSessions, training: trainingSessions)
-        return days > 0 ? "\(days)d" : "–"
+    private var goalKind: GoalKind { GoalKind(rawValue: goalKindRaw) ?? .none }
+
+    private var goalStreakLabel: String {
+        guard goalKind != .none else { return "–" }
+        let count = Stats.goalStreak(
+            play: playSessions,
+            training: trainingSessions,
+            kind: goalKind,
+            target: max(1, goalTarget)
+        )
+        let unit = goalKind == .weekly ? "w" : "mo"
+        return count > 0 ? "\(count)\(unit)" : "0\(unit)"
+    }
+
+    private var matchStreakLabel: String {
+        guard let streak = Stats.currentStreak(matches) else { return "–" }
+        let kind = streak.kind == .win ? "W" : "L"
+        return "\(streak.count)\(kind)"
     }
 
     private var winRateLabel: String {
@@ -132,20 +160,9 @@ struct DashboardView: View {
     // screen is intentionally left for a later design pass.
 
     private var goalProgress: (count: Int, target: Int, kind: GoalKind)? {
-        let kind = GoalKind(rawValue: goalKindRaw) ?? .none
-        guard kind != .none else { return nil }
-
-        let calendar = Calendar.current
-        let interval: DateInterval?
-        switch kind {
-        case .none: interval = nil
-        case .weekly: interval = calendar.dateInterval(of: .weekOfYear, for: .now)
-        case .monthly: interval = calendar.dateInterval(of: .month, for: .now)
-        }
-        guard let interval else { return nil }
-
+        guard goalKind != .none, let interval = Stats.interval(for: goalKind) else { return nil }
         let count = Stats.sessions(play: playSessions, training: trainingSessions, in: interval)
-        return (count, max(1, goalTarget), kind)
+        return (count, max(1, goalTarget), goalKind)
     }
 
     private var goalCard: some View {
@@ -253,7 +270,7 @@ struct DashboardView: View {
                         VStack(alignment: .leading, spacing: 2) {
                             Text("vs \(match.opponent)")
                                 .font(.subheadline.weight(.semibold))
-                            Text(AppFormat.date(match.date))
+                            Text(AppFormat.dateTime(match.date))
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                         }
@@ -264,6 +281,208 @@ struct DashboardView: View {
             }
         }
         .cardStyle()
+    }
+}
+
+// MARK: - Global search
+
+struct GlobalSearchView: View {
+    @Environment(\.dismiss) private var dismiss
+    @Query(sort: \PlaySession.date, order: .reverse) private var playSessions: [PlaySession]
+    @Query(sort: \TrainingSession.date, order: .reverse) private var trainingSessions: [TrainingSession]
+    @Query(sort: \Match.date, order: .reverse) private var matches: [Match]
+    @Query(sort: \Tournament.startDate, order: .reverse) private var tournaments: [Tournament]
+
+    @State private var searchText = ""
+
+    private var query: String { searchText.trimmingCharacters(in: .whitespacesAndNewlines) }
+
+    var body: some View {
+        NavigationStack {
+            List {
+                if query.isEmpty {
+                    ContentUnavailableView(
+                        "Search everything",
+                        systemImage: "magnifyingglass",
+                        description: Text("Find opponents, locations, drills, focus areas, tournaments, and notes.")
+                    )
+                } else if filteredMatches.isEmpty && filteredPlay.isEmpty && filteredTraining.isEmpty && filteredTournaments.isEmpty {
+                    ContentUnavailableView.search(text: query)
+                } else {
+                    if !filteredMatches.isEmpty {
+                        Section("Matches") {
+                            ForEach(filteredMatches) { match in
+                                NavigationLink(value: match) {
+                                    MatchRow(match: match)
+                                }
+                            }
+                        }
+                    }
+                    if !filteredPlay.isEmpty {
+                        Section("Play") {
+                            ForEach(filteredPlay) { session in
+                                PlaySearchRow(session: session)
+                            }
+                        }
+                    }
+                    if !filteredTraining.isEmpty {
+                        Section("Training") {
+                            ForEach(filteredTraining) { session in
+                                TrainingSearchRow(session: session)
+                            }
+                        }
+                    }
+                    if !filteredTournaments.isEmpty {
+                        Section("Tournaments") {
+                            ForEach(filteredTournaments) { tournament in
+                                NavigationLink(value: tournament) {
+                                    TournamentSearchRow(tournament: tournament)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            .listStyle(.insetGrouped)
+            .searchable(text: $searchText, placement: .navigationBarDrawer(displayMode: .always), prompt: "Opponents, places, drills, notes…")
+            .navigationTitle("Search")
+            .navigationBarTitleDisplayMode(.inline)
+            .navigationDestination(for: Match.self) { match in
+                MatchDetailView(match: match)
+            }
+            .navigationDestination(for: Tournament.self) { tournament in
+                TournamentDetailView(tournament: tournament)
+            }
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") { dismiss() }
+                }
+            }
+        }
+    }
+
+    private func contains(_ text: String?) -> Bool {
+        guard let text, !text.isEmpty else { return false }
+        return text.localizedCaseInsensitiveContains(query)
+    }
+
+    private var filteredMatches: [Match] {
+        guard !query.isEmpty else { return [] }
+        return matches.filter { match in
+            contains(match.opponent)
+            || match.myGameScores.contains(where: { "\($0)".contains(query) })
+            || match.opponentGameScores.contains(where: { "\($0)".contains(query) })
+            || contains(match.notes)
+            || contains(match.discipline.label)
+            || contains(match.pointSystem.label)
+            || contains(match.intensity?.label)
+            || contains(match.opponentLevel?.label)
+            || contains(match.tournament?.name)
+        }
+    }
+
+    private var filteredPlay: [PlaySession] {
+        guard !query.isEmpty else { return [] }
+        return playSessions.filter { session in
+            session.opponents.contains(where: { $0.localizedCaseInsensitiveContains(query) })
+            || contains(session.location)
+            || contains(session.notes)
+            || contains(session.discipline.label)
+            || contains(session.intensity?.label)
+        }
+    }
+
+    private var filteredTraining: [TrainingSession] {
+        guard !query.isEmpty else { return [] }
+        return trainingSessions.filter { session in
+            contains(session.coach)
+            || session.focusAreas.contains(where: { $0.localizedCaseInsensitiveContains(query) })
+            || contains(session.drillsDescription)
+            || contains(session.drillName)
+            || contains(session.notes)
+            || contains(session.intensity?.label)
+        }
+    }
+
+    private var filteredTournaments: [Tournament] {
+        guard !query.isEmpty else { return [] }
+        return tournaments.filter { tournament in
+            contains(tournament.name)
+            || contains(tournament.strategyNotes)
+            || contains(tournament.type.label)
+            || contains(tournament.placement?.label)
+        }
+    }
+}
+
+private struct PlaySearchRow: View {
+    let session: PlaySession
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack {
+                Label(AppFormat.duration(minutes: session.durationMinutes), systemImage: "figure.play")
+                    .font(.subheadline.weight(.semibold))
+                Spacer()
+                Text(AppFormat.dateTime(session.date))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            Text([session.discipline.label, session.location, session.opponents.joined(separator: ", ")]
+                .compactMap { $0?.isEmpty == false ? $0 : nil }
+                .joined(separator: " · "))
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .lineLimit(2)
+        }
+    }
+}
+
+private struct TrainingSearchRow: View {
+    let session: TrainingSession
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack {
+                Label(AppFormat.duration(minutes: session.durationMinutes), systemImage: "dumbbell")
+                    .font(.subheadline.weight(.semibold))
+                Spacer()
+                Text(AppFormat.dateTime(session.date))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            let detail = ([session.drillName, session.coach] + session.focusAreas)
+                .compactMap { $0?.isEmpty == false ? $0 : nil }
+                .joined(separator: " · ")
+            if !detail.isEmpty {
+                Text(detail)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(2)
+            }
+        }
+    }
+}
+
+private struct TournamentSearchRow: View {
+    let tournament: Tournament
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack {
+                Label(tournament.name, systemImage: tournament.type.symbol)
+                    .font(.subheadline.weight(.semibold))
+                Spacer()
+                if let placement = tournament.placement {
+                    Text(placement.label)
+                        .font(.caption2)
+                        .foregroundStyle(.orange)
+                }
+            }
+            Text("\(tournament.type.label) · \(tournament.recordDescription)")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
     }
 }
 
