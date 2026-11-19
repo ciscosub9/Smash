@@ -71,15 +71,6 @@ Smash/
 - **SwiftData** for persistence; scoring and stats logic is pure and unit-tested, independent of the database.
 - No third-party dependencies.
 
-## Roadmap
-
-- [x] App icon
-- [ ] App Store listing assets
-- [x] Export data (JSON, optional password encryption) · import merges back
-- [ ] Per-opponent history drill-down
-- [ ] Apple Watch companion
-- [ ] Widgets & App Intents shortcuts
-
 ## Contributing
 
 Issues and pull requests welcome — this project exists to be forked, improved, and played with. For large changes, open an issue first to discuss. Note that all contributions land under GPL-3.0.
