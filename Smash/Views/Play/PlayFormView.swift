@@ -28,6 +28,7 @@ struct PlayFormView: View {
     @State private var opponentScores = [0, 0, 0]
     @State private var showScoreEditor = false
     @State private var showValidation = false
+    @State private var confirmDelete = false
     @State private var validationText = ""
 
     /// The linked Match is resolved once when the form is populated, then reused.
@@ -147,6 +148,14 @@ struct PlayFormView: View {
                 TextField("Anything worth remembering?", text: $notes, axis: .vertical)
                     .lineLimit(3...6)
             }
+
+            if editing != nil || editingMatch != nil {
+                Section {
+                    Button(role: .destructive) { confirmDelete = true } label: {
+                        Label("Delete session", systemImage: "trash")
+                    }
+                }
+            }
         }
         .formStyle(.grouped)
         .navigationTitle(editing == nil && editingMatch == nil ? "Court time" : "Edit session")
@@ -177,7 +186,23 @@ struct PlayFormView: View {
         } message: {
             Text(validationText)
         }
+        .alert("Delete this session?", isPresented: $confirmDelete) {
+            Button("Cancel", role: .cancel) {}
+            Button("Delete", role: .destructive) { deleteSession() }
+        } message: {
+            Text("This removes the session and its score. It can't be undone.")
+        }
         .onAppear(perform: populate)
+    }
+
+    private func deleteSession() {
+        if let editing { context.delete(editing) }
+        if let match = linkedMatchState ?? editingMatch { context.delete(match) }
+        if let onSaved {
+            onSaved()
+        } else {
+            dismiss()
+        }
     }
 
     // MARK: - Helpers

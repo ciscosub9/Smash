@@ -54,7 +54,9 @@ struct PlayersView: View {
                             PlayerCard(
                                 player: player,
                                 record: record(for: player, from: records),
-                                onDetail: { detailFor = player }
+                                onDetail: { detailFor = player },
+                                onEdit: { editing = player },
+                                onDelete: { delete(player) }
                             )
                             .swipeActions(edge: .leading) {
                                 Button { editing = player } label: {
@@ -134,32 +136,51 @@ private struct PlayerCard: View {
     let player: Player
     let record: Record
     let onDetail: () -> Void
+    let onEdit: () -> Void
+    let onDelete: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Button(action: onDetail) {
-                HStack(spacing: 10) {
-                    Image(systemName: "person.crop.circle.fill")
-                        .font(.title2)
-                        .foregroundStyle(.secondary)
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(player.name)
-                            .font(.headline)
-                            .foregroundStyle(.primary)
-                        if let level = player.level {
-                            Text(level.label)
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
+            HStack(spacing: 10) {
+                Button(action: onDetail) {
+                    HStack(spacing: 10) {
+                        Image(systemName: "person.crop.circle.fill")
+                            .font(.title2)
+                            .foregroundStyle(.secondary)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(player.name)
+                                .font(.headline)
+                                .foregroundStyle(.primary)
+                            if let level = player.level {
+                                Text(level.label)
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
                         }
+                        Spacer(minLength: 4)
+                        Image(systemName: "chevron.right")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.tertiary)
                     }
-                    Spacer()
-                    Image(systemName: "chevron.right")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(.tertiary)
+                    .contentShape(Rectangle())
                 }
-                .contentShape(Rectangle())
+                .buttonStyle(.plain)
+
+                Menu {
+                    Button { onEdit() } label: {
+                        Label("Edit player", systemImage: "pencil")
+                    }
+                    Button(role: .destructive) { onDelete() } label: {
+                        Label("Delete player", systemImage: "trash")
+                    }
+                } label: {
+                    Image(systemName: "ellipsis.circle")
+                        .font(.title3)
+                        .foregroundStyle(.secondary)
+                        .frame(minWidth: 32, minHeight: 32)
+                        .accessibilityLabel("Player options")
+                }
             }
-            .buttonStyle(.plain)
 
             Divider()
 

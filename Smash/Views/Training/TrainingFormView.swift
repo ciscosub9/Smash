@@ -12,6 +12,7 @@ struct TrainingFormView: View {
     @State private var drills: [TrainingDrillEntry] = [TrainingDrillEntry(name: "")]
     @State private var notes = ""
     @State private var saved = false
+    @State private var confirmDelete = false
 
     private let editing: TrainingSession?
     var embedded: Bool
@@ -151,6 +152,14 @@ struct TrainingFormView: View {
                 TextField("How did it feel? What to repeat next time?", text: $notes, axis: .vertical)
                     .lineLimit(2...5)
             }
+
+            if editing != nil {
+                Section {
+                    Button(role: .destructive) { confirmDelete = true } label: {
+                        Label("Delete session", systemImage: "trash")
+                    }
+                }
+            }
         }
         .formStyle(.grouped)
         .navigationTitle(editing == nil ? "Log training" : "Edit session")
@@ -166,7 +175,22 @@ struct TrainingFormView: View {
             }
         }
         .sensoryFeedback(.success, trigger: saved)
+        .alert("Delete this session?", isPresented: $confirmDelete) {
+            Button("Cancel", role: .cancel) {}
+            Button("Delete", role: .destructive) { deleteSession() }
+        } message: {
+            Text("This removes the session and its drills. It can't be undone.")
+        }
         .onAppear(perform: populate)
+    }
+
+    private func deleteSession() {
+        if let editing { context.delete(editing) }
+        if let onSaved {
+            onSaved()
+        } else {
+            dismiss()
+        }
     }
 
     // MARK: - Logic

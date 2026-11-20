@@ -7,7 +7,6 @@ struct TournamentDetailView: View {
     @Environment(\.dismiss) private var dismiss
 
     @State private var showEdit = false
-    @State private var showAddMatch = false
     @State private var confirmDelete = false
 
     private var sortedMatches: [Match] {
@@ -67,15 +66,12 @@ struct TournamentDetailView: View {
         .navigationTitle(tournament.name)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
-            ToolbarItem(placement: .topBarLeading) {
-                Button("Edit") { showEdit = true }
-            }
             ToolbarItem(placement: .topBarTrailing) {
                 Menu {
                     Button {
-                        showAddMatch = true
+                        showEdit = true
                     } label: {
-                        Label("Add match", systemImage: "plus")
+                        Label("Edit tournament", systemImage: "pencil")
                     }
                     Button(role: .destructive) {
                         confirmDelete = true
@@ -89,9 +85,6 @@ struct TournamentDetailView: View {
         }
         .sheet(isPresented: $showEdit) {
             TournamentFormView(tournament: tournament)
-        }
-        .sheet(isPresented: $showAddMatch) {
-            MatchFormView(presetTournament: tournament)
         }
         .confirmationDialog(
             "Delete this tournament?",

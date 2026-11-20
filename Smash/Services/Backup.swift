@@ -258,8 +258,11 @@ nonisolated enum BackupCrypto {
     }
 
     static let iterations = 600_000
-    static let minIterations = 1
-    static let maxIterations = 1_000_000
+    /// Iterations are file metadata, not a knob an imported file gets to pick.
+    /// Accepting arbitrary values lets a crafted backup force seconds of PBKDF2
+    /// work or claim a trivially weak KDF, so only the value we write is valid.
+    static let minIterations = iterations
+    static let maxIterations = iterations
     private static let minSaltBytes = 8
     private static let maxSaltBytes = 64
     /// AES-GCM combined boxes carry a 12-byte nonce and a 16-byte tag.
@@ -392,9 +395,15 @@ nonisolated enum BackupFormat {
     static let maxTotalRecords = 100_000
     static let maxDurationMinutes = 365 * 24 * 60
     static let maxGamesPerMatch = 100
+    /// The forms cap continuous play at 20 games. Best-of-three uses three.
+    static let maxContinuousGames = 20
     static let maxPointsPerGame = 1_000
     static let maxDrillsPerSession = 50
     static let maxTextLength = 20_000
+    /// Imported dates are clamped so a malformed file can't push an extreme
+    /// timestamp into date formatting or stats calculations.
+    static let minDate = Date(timeIntervalSince1970: 0)
+    static let maxDate = Date(timeIntervalSince1970: 4_102_444_800) // 2100-01-01
 
     static func prettyJSONEncoder() -> JSONEncoder {
         let encoder = JSONEncoder()
@@ -474,6 +483,25 @@ nonisolated enum Backup {
             throw Failure(message: "This backup file is too large to import (over 50 MB).")
         }
 
+        // Count the arrays before building typed models. A 50 MB file of tiny
+        // objects can expand into millions of Swift structs; reject it while
+        // the in-memory representation is still cheap. If this quick parse
+        // fails, the typed decode below returns the proper format error.
+        if let root = try? JSONSerialization.jsonObject(with: data),
+           let json = root as? [String: Any] {
+            var total = 0
+            for key in ["playSessions", "trainingSessions", "tournaments", "matches", "players"] {
+                let count = (json[key] as? [Any])?.count ?? 0
+                guard count <= BackupFormat.maxRecordsPerKind else {
+                    throw Failure(message: "This backup contains too many records to import.")
+                }
+                total += count
+            }
+            guard total <= BackupFormat.maxTotalRecords else {
+                throw Failure(message: "This backup contains too many records to import.")
+            }
+        }
+
         let bundle: BackupBundle
         do {
             bundle = try JSONDecoder().decode(BackupBundle.self, from: data)
@@ -512,6 +540,10 @@ nonisolated enum Backup {
         min(max(minutes, 0), BackupFormat.maxDurationMinutes)
     }
 
+    private static func boundedDate(_ date: Date) -> Date {
+        min(max(date, BackupFormat.minDate), BackupFormat.maxDate)
+    }
+
     private static func sanitize(_ snapshot: PlayerProfileSnapshot?) -> PlayerProfileSnapshot? {
         guard var player = snapshot else { return nil }
         player.name = String(player.name.prefix(200))
@@ -527,6 +559,7 @@ nonisolated enum Backup {
 
     private static func sanitize(_ snapshot: PlaySessionSnapshot) -> PlaySessionSnapshot {
         var session = snapshot
+        session.date = min(boundedDate(session.date), Date.now)
         session.durationMinutes = duration(session.durationMinutes)
         session.discipline = (Discipline(rawValue: session.discipline) ?? .singles).rawValue
         session.intensity = session.intensity.flatMap { Intensity(rawValue: $0)?.rawValue }
@@ -538,6 +571,7 @@ nonisolated enum Backup {
 
     private static func sanitize(_ snapshot: TrainingSessionSnapshot) -> TrainingSessionSnapshot {
         var session = snapshot
+        session.date = min(boundedDate(session.date), Date.now)
         session.durationMinutes = duration(session.durationMinutes)
         session.focusAreas = Array(session.focusAreas.prefix(50).map { String($0.prefix(100)) })
         session.drillsDescription = text(session.drillsDescription) ?? ""
@@ -573,22 +607,30 @@ nonisolated enum Backup {
         tournament.type = (TournamentType(rawValue: tournament.type) ?? .roundRobin).rawValue
         tournament.placement = tournament.placement.flatMap { Placement(rawValue: $0)?.rawValue }
         tournament.strategyNotes = text(tournament.strategyNotes)
+        tournament.startDate = min(boundedDate(tournament.startDate), Date.now)
+        tournament.endDate = tournament.endDate.map { min(boundedDate($0), Date.now) }
         if let end = tournament.endDate, end < tournament.startDate { tournament.endDate = nil }
         return tournament
     }
 
     private static func sanitize(_ snapshot: MatchSnapshot) -> MatchSnapshot {
         var match = snapshot
+        match.date = min(boundedDate(match.date), Date.now)
         match.opponent = text(match.opponent, limit: 200) ?? ""
         match.partner = text(match.partner, limit: 200)
         match.discipline = (Discipline(rawValue: match.discipline) ?? .singles).rawValue
         match.pointSystem = (PointSystem(rawValue: match.pointSystem) ?? .points21).rawValue
-        match.format = (MatchFormat(rawValue: match.format) ?? .bestOf3).rawValue
+        let format = MatchFormat(rawValue: match.format) ?? .bestOf3
+        match.format = format.rawValue
         match.opponentLevel = match.opponentLevel.flatMap { SkillLevel(rawValue: $0)?.rawValue }
         match.intensity = match.intensity.flatMap { Intensity(rawValue: $0)?.rawValue }
         match.notes = text(match.notes)
 
-        let count = min(max(match.myGameScores.count, match.opponentGameScores.count), BackupFormat.maxGamesPerMatch)
+        // Outcome reads every score slot, but validation only checks the slots
+        // the format allows. Trim first so a malformed file can't smuggle extra
+        // games past validation and flip the recorded result.
+        let gameLimit = format == .bestOf3 ? 3 : BackupFormat.maxContinuousGames
+        let count = min(max(match.myGameScores.count, match.opponentGameScores.count), gameLimit)
         var mine = Array(match.myGameScores.prefix(count))
         var theirs = Array(match.opponentGameScores.prefix(count))
         mine.append(contentsOf: repeatElement(0, count: count - mine.count))
@@ -600,6 +642,7 @@ nonisolated enum Backup {
 
     private static func sanitize(_ snapshot: PlayerSnapshot) -> PlayerSnapshot {
         var player = snapshot
+        player.addedAt = min(boundedDate(player.addedAt), Date.now)
         player.name = text(player.name, limit: 200) ?? ""
         player.level = player.level.flatMap { SkillLevel(rawValue: $0)?.rawValue }
         player.notes = text(player.notes)

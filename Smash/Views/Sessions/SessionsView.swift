@@ -101,41 +101,55 @@ struct SessionsView: View {
 
     // MARK: - Rows
 
+    /// The chevron lives inside the button label so tapping the arrow opens
+    /// the same editor as tapping the rest of the card.
     @ViewBuilder
+    private func cardLabel<Content: View>(@ViewBuilder _ content: () -> Content) -> some View {
+        HStack(spacing: 8) {
+            content()
+                .frame(maxWidth: .infinity, alignment: .leading)
+            Image(systemName: "chevron.right")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.secondary)
+                .accessibilityHidden(true)
+        }
+        .contentShape(Rectangle())
+    }
+
+    @ViewBuilder
+    private func cardContent(for item: SessionItem) -> some View {
+        switch item {
+        case .play(let session, let match):
+            Button { editingPlay = session } label: {
+                cardLabel { PlaySessionRow(session: session, linkedMatch: match) }
+            }
+            .buttonStyle(.plain)
+        case .match(let match):
+            NavigationLink(value: match) {
+                cardLabel { MatchRow(match: match) }
+            }
+            .buttonStyle(.plain)
+        case .training(let session):
+            Button { editingTraining = session } label: {
+                cardLabel { TrainingSessionRow(session: session) }
+            }
+            .buttonStyle(.plain)
+        }
+    }
+
     private func card(for item: SessionItem) -> some View {
-        Group {
-            switch item {
-            case .play(let session, let match):
-                Button { editingPlay = session } label: {
-                    PlaySessionRow(session: session, linkedMatch: match)
-                        .frame(maxWidth: .infinity, alignment: .leading)
+        cardContent(for: item)
+            .cardStyle()
+            .swipeActions(edge: .trailing) {
+                Button(role: .destructive) { delete(item) } label: {
+                    Label("Delete", systemImage: "trash")
                 }
-                .buttonStyle(.plain)
-            case .match(let match):
-                NavigationLink(value: match) {
-                    MatchRow(match: match)
-                        .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .contextMenu {
+                Button(role: .destructive) { delete(item) } label: {
+                    Label("Delete", systemImage: "trash")
                 }
-                .buttonStyle(.plain)
-            case .training(let session):
-                Button { editingTraining = session } label: {
-                    TrainingSessionRow(session: session)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                }
-                .buttonStyle(.plain)
             }
-        }
-        .cardStyle()
-        .swipeActions(edge: .trailing) {
-            Button(role: .destructive) { delete(item) } label: {
-                Label("Delete", systemImage: "trash")
-            }
-        }
-        .contextMenu {
-            Button(role: .destructive) { delete(item) } label: {
-                Label("Delete", systemImage: "trash")
-            }
-        }
     }
 
     private func delete(_ item: SessionItem) {

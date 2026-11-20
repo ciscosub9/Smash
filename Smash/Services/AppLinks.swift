@@ -25,6 +25,6 @@ nonisolated enum AppLinks {
     static let terms = URL(string: "\(docsBase)TERMS.md")!
     static let usage = URL(string: "\(docsBase)USAGE.md")!
 
-    /// The GPL-3.0 license text, linked from Profile → Policies.
+    /// The MIT license text, linked from Profile → Policies.
     static let license = URL(string: "https://github.com/ciscosub9/Smash/blob/main/LICENSE")!
 }

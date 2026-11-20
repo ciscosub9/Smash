@@ -14,7 +14,7 @@ Use Smash for anything lawful. Don't use it to infringe someone else's rights or
 
 ## Open source
 
-Smash is licensed under the [GNU General Public License v3.0](../LICENSE). You can use, study, change and share the source under that license. It doesn't bind the copyright holder's own distribution of their builds.
+Smash is licensed under the [MIT license](../LICENSE). You can use, study, change and share the source under that license.
 
 ## External links
 

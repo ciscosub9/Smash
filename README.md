@@ -8,7 +8,7 @@ Free, open-source badminton tracking for iPhone and iPad.
 
 [![Platform](https://img.shields.io/badge/platform-iOS%2018+-black)](#)
 [![Swift](https://img.shields.io/badge/swift-6-orange)](#)
-[![License: GPL v3](https://img.shields.io/badge/license-GPL--v3-blue)](LICENSE)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
 </div>
 
@@ -94,12 +94,12 @@ It's Swift 6 with main-actor-by-default isolation. SwiftData handles storage. Sc
 
 ## Contributing
 
-Issues and pull requests are welcome. If you're planning a big change, open an issue first so we can talk it through. All contributions land under GPL-3.0.
+Issues and pull requests are welcome. If you're planning a big change, open an issue first so we can talk it through. All contributions land under the MIT license.
 
 ## License
 
-Smash is [free software](https://www.gnu.org/philosophy/free-sw.en.html) under the [GNU General Public License v3.0](LICENSE).
+Smash is free and open source under the [MIT license](LICENSE).
 
-You can use it, study it, change it and share it. If you fork it or build on it, including in a commercial or App Store release, you have to release your source under GPL-3.0 too. Closed-source copies aren't allowed. A credit and a link back here are welcome but not required.
+Use it, study it, change it and share it. Forks and commercial or App Store releases are welcome, closed source included. A credit and a link back here are appreciated but not required.
 
-One wrinkle: the GPL is widely seen as incompatible with App Store distribution, since Apple's DRM and review rules don't fit the GPL's terms. As the copyright holder, I can still put my own builds on the App Store; the license doesn't bind me. If someone else wants to do that, they need to follow the GPL.
+MIT keeps things simple for App Store distribution: there's no copyleft requirement and no tension with Apple's terms.

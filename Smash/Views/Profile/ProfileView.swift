@@ -66,7 +66,7 @@ struct ProfileView: View {
                         Label("Usage Guide", systemImage: "book")
                     }
                     Link(destination: AppLinks.license) {
-                        Label("License (GPL-3.0)", systemImage: "chevron.left.forwardslash.chevron.right")
+                        Label("License (MIT)", systemImage: "chevron.left.forwardslash.chevron.right")
                     }
                 } header: {
                     Text("Policies")

@@ -104,4 +104,76 @@ struct BackupTests {
             try BackupCrypto.encrypt(Data("secret".utf8), password: "")
         }
     }
+
+    @Test("Encrypted backup rejects an attacker-chosen work factor")
+    func rejectsUnsupportedIterations() throws {
+        let file: [String: Any] = [
+            "smashEncryptedBackup": [
+                "salt": Data(repeating: 1, count: 16).base64EncodedString(),
+                "iterations": 1_000_000,
+                "ciphertext": Data(repeating: 0, count: 28).base64EncodedString(),
+            ]
+        ]
+        let data = try JSONSerialization.data(withJSONObject: file)
+        #expect(throws: (any Error).self) {
+            try BackupCrypto.decrypt(data, password: "smash123")
+        }
+    }
+
+    // MARK: Import hardening
+
+    private func bundleJSON(matches: [[String: Any]] = [], players: [[String: Any]] = []) throws -> Data {
+        let root: [String: Any] = [
+            "formatVersion": 1,
+            "exportedAt": 0,
+            "playSessions": [],
+            "trainingSessions": [],
+            "tournaments": [],
+            "matches": matches,
+            "players": players,
+        ]
+        return try JSONSerialization.data(withJSONObject: root)
+    }
+
+    private func matchJSON(games mine: [Int] = [21], _ theirs: [Int] = [10], date: Double = 0) -> [String: Any] {
+        [
+            "date": date,
+            "opponent": "Ravi",
+            "discipline": "singles",
+            "pointSystem": "points21",
+            "format": "bestOf3",
+            "myGameScores": mine,
+            "opponentGameScores": theirs,
+        ]
+    }
+
+    @Test("Import clamps extreme and future dates")
+    func clampsImportedDates() throws {
+        let data = try bundleJSON(
+            matches: [matchJSON(date: 1e300)],
+            players: [["name": "Ravi", "addedAt": -1e300]]
+        )
+        let validated = try Backup.prepare(data)
+        #expect(validated.matches.count == 1)
+        #expect(validated.matches[0].date >= BackupFormat.minDate)
+        #expect(validated.matches[0].date <= Date.now)
+        #expect(validated.players[0].addedAt >= BackupFormat.minDate)
+    }
+
+    @Test("Import trims games a format never validates")
+    func trimsExtraGames() throws {
+        let data = try bundleJSON(matches: [matchJSON(games: [21, 10, 21, 50, 99], [10, 21, 15, 1, 1])])
+        let validated = try Backup.prepare(data)
+        #expect(validated.matches[0].myGameScores.count == 3)
+        #expect(validated.matches[0].opponentGameScores.count == 3)
+    }
+
+    @Test("Import rejects an oversized record count before decoding models")
+    func rejectsOversizedImport() throws {
+        let matches = (0..<(BackupFormat.maxRecordsPerKind + 1)).map { _ in matchJSON() }
+        let data = try bundleJSON(matches: matches)
+        #expect(throws: (any Error).self) {
+            try Backup.prepare(data)
+        }
+    }
 }
