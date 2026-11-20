@@ -2,17 +2,6 @@ import Foundation
 
 /// External links shown in the app.
 nonisolated enum AppLinks {
-    /// Pre-filled feedback email.
-    static var feedback: URL {
-        var components = URLComponents()
-        components.scheme = "mailto"
-        components.path = feedbackEmail
-        components.queryItems = [URLQueryItem(name: "subject", value: "Smash app feedback")]
-        return components.url ?? URL(string: "mailto:\(feedbackEmail)")!
-    }
-
-    static let feedbackEmail = "ciscosub9@users.noreply.github.com"
-
     /// The public repository (linked from Settings).
     static let sourceCode = URL(string: "https://github.com/ciscosub9/Smash")!
 

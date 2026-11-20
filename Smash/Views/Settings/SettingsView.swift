@@ -270,9 +270,6 @@ struct SettingsView: View {
 
     private var moreSection: some View {
         Section {
-            Link(destination: AppLinks.feedback) {
-                Label("Send feedback", systemImage: "envelope")
-            }
             Link(destination: AppLinks.sourceCode) {
                 Label("Source on GitHub", systemImage: "link")
             }
