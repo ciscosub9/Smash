@@ -338,7 +338,7 @@ struct PlayerFormView: View {
                         .disabled(trimmedName.isEmpty || isSaving)
                 }
             }
-            .onChange(of: name) { _ in nameError = nil }
+            .onChange(of: name) { _, _ in nameError = nil }
             .onAppear {
                 // onAppear can fire again when a sheet is covered and revealed;
                 // never discard edits the user has already typed.
