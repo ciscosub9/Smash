@@ -13,6 +13,8 @@ struct TournamentFormView: View {
     @State private var placement: Placement?
     @State private var strategyNotes = ""
     @State private var saved = false
+    @State private var isSaving = false
+    @State private var didPopulate = false
 
     private let editing: Tournament?
 
@@ -40,10 +42,10 @@ struct TournamentFormView: View {
                 }
 
                 Section {
-                    DatePicker("Starts", selection: $startDate, displayedComponents: .date)
+                    DatePicker("Starts", selection: $startDate, in: ...Date.now, displayedComponents: .date)
                     Toggle("Multi-day", isOn: $hasEndDate)
                     if hasEndDate {
-                        DatePicker("Ends", selection: $endDate, in: startDate..., displayedComponents: .date)
+                        DatePicker("Ends", selection: $endDate, in: startDate...Date.now, displayedComponents: .date)
                     }
                 } header: {
                     Text("Dates")
@@ -74,7 +76,7 @@ struct TournamentFormView: View {
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save") { save() }
-                        .disabled(!isValid)
+                        .disabled(!isValid || isSaving)
                         .fontWeight(.semibold)
                 }
             }
@@ -90,7 +92,7 @@ struct TournamentFormView: View {
     private var typeSummary: String {
         switch type {
         case .roundRobin:
-            "Everyone plays everyone — most wins takes the title."
+            "Everyone plays everyone — the most wins takes the title."
         case .knockout:
             "Lose once and you're out."
         case .league:
@@ -103,34 +105,42 @@ struct TournamentFormView: View {
     }
 
     private func populate() {
-        guard let editing else { return }
+        guard let editing, !didPopulate else { return }
+        didPopulate = true
         name = editing.name
         type = editing.type
-        startDate = editing.startDate
+        // Imported records can hold future or reversed dates; normalise them
+        // before they reach a constrained DatePicker.
+        let today = Date.now
+        startDate = min(editing.startDate, today)
         if let end = editing.endDate {
             hasEndDate = true
-            endDate = end
+            endDate = min(max(end, startDate), today)
         }
         placement = editing.placement
         strategyNotes = editing.strategyNotes ?? ""
     }
 
     private func save() {
+        guard !isSaving else { return }
+        isSaving = true
         let trimmedName = name.trimmingCharacters(in: .whitespaces)
+        let start = min(startDate, Date.now)
+        let end = hasEndDate ? min(max(endDate, start), Date.now) : nil
 
         if let editing {
             editing.name = trimmedName
             editing.type = type
-            editing.startDate = startDate
-            editing.endDate = hasEndDate ? endDate : nil
+            editing.startDate = start
+            editing.endDate = end
             editing.placement = placement
             editing.strategyNotes = strategyNotes.isEmpty ? nil : strategyNotes
         } else {
             context.insert(Tournament(
                 name: trimmedName,
                 type: type,
-                startDate: startDate,
-                endDate: hasEndDate ? endDate : nil,
+                startDate: start,
+                endDate: end,
                 placement: placement,
                 strategyNotes: strategyNotes.isEmpty ? nil : strategyNotes
             ))

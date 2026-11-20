@@ -60,7 +60,11 @@ struct BackupTests {
         #expect(clubOpenMatch?.intensity == .hard)
 
         let importedTraining = try destination.mainContext.fetch(FetchDescriptor<TrainingSession>())
-        #expect(importedTraining.contains { $0.drillName == "Multi-shuttle" && $0.setsDone == 6 && $0.intensity == .hard })
+        let multiShuttle = importedTraining.first { $0.drillNames.contains("Multi-shuttle") }
+        #expect(multiShuttle != nil)
+        #expect(multiShuttle?.drillNames == ["Multi-shuttle", "Net kills"])
+        #expect(multiShuttle?.drillSets == [6, 4])
+        #expect(multiShuttle?.drillEntries.map(\.intensity) == [.hard, .moderate])
     }
 
     // MARK: Encryption

@@ -4,9 +4,7 @@
 
 # Smash
 
-**Free, open-source badminton tracking for iPhone.**
-
-Track daily play, coaching sessions, matches with full scoring, and tournaments — with a native Apple design language.
+Free, open-source badminton tracking for iPhone and iPad.
 
 [![Platform](https://img.shields.io/badge/platform-iOS%2018+-black)](#)
 [![Swift](https://img.shields.io/badge/swift-6-orange)](#)
@@ -14,26 +12,53 @@ Track daily play, coaching sessions, matches with full scoring, and tournaments 
 
 </div>
 
+## What it does
+
+Smash keeps your badminton records on your device. Log court time (with the score in the same form), the drills you work on, and the tournaments you enter. There's no account and no sign-in. It works offline, and iCloud sync is there if you want the same data on more than one device.
+
 ## Features
 
-- **Play** — log daily sessions with duration, discipline (singles / doubles / mixed), intensity, court, and who you played with.
-- **Training** — record coaching and drill sessions: pick the drill (presets or custom), sets completed, difficulty, focus areas, coach, and notes on what to repeat.
-- **Matches** — full score tracking with three point systems (15-point, 21-point rally, continuous) in single-game or best-of-3 format. Tag each match with intensity and opponent level (Beginner → Professional); win rate is computed automatically.
-- **Tournaments** — round robin, knockout, league, and ladder formats. Link matches to a tournament, track wins/losses and placement, and keep strategy notes.
-- **Dashboard** — weekly on-court time, streaks, win rate, and recent results at a glance (Swift Charts). One-tap light/dark switch up top.
-- **Appearance** — Automatic (follows system), Light, or Dark — quick switch on the Dashboard, full control in Settings.
-- **Backup & import** — export all data as JSON from Settings, optionally encrypted with a password (PBKDF2 + AES-256-GCM). Import merges records back without overwriting anything.
-- **Player profile** — your name and skill level, kept alongside the same Beginner → Professional scale used for opponents.
-- **Activity goals** — set a weekly or monthly target ("5 sessions a week") in your profile; the Dashboard tracks progress live and celebrates when you hit it.
-- **Your data, your choice** — store everything locally on device (default, private) or flip on iCloud sync in Settings. No accounts, no analytics, no tracking.
+- Sessions. One tab for everything you log. Tap the plus button, pick Singles, Doubles or Training, and the form opens straight away. The list below keeps play sessions, scored matches and training together in date order.
+
+- Players. Keep a list of the people you play with. Pick one when you log a session or match and the name and level carry over. Partners come from the same list.
+
+- Court time and scoring. Log a date, start time and duration on court. Scoring lives inside the same form: choose 15-point or 21-point rally rules, continuous games or best-of-three, then add games, intensity, your opponent's level and a partner for doubles. Smash works out your win rate and how you do with each partner.
+
+- Training. Add as many drills as you worked on, each with its own sets and difficulty, plus focus areas and notes on what to repeat next time. Pick a drill from the inline menu or type your own — there's no separate library to browse.
+
+- Tournaments. Round robin, knockout, league or ladder. Link matches to an event, track your placement and keep notes on what worked.
+
+- Dashboard. Sessions this week, matches, win rate and loss rate in four cards, followed by form rating, goal progress and an activity chart. The chart counts sessions — its caption reads "in number of sessions". Light and dark are a tap away at the top.
+
+- Form rating. An Elo-style score built from your last 30 days. Everyone starts at 1400; wins lift it, losses pull it down, and beating a stronger player moves it more. It appears on the Dashboard and Profile.
+
+- Coach's Corner. Short, explainable reads from your recent matches — form, opponents, partnerships and game patterns — each with the evidence behind it and one practical next step. It never claims causation.
+
+- Personalization. Appearance and 12- or 24-hour time. Goal cadence lives in Profile. A short tour runs once after setup and you can replay it whenever you like.
+
+- Backup and import. Export everything as JSON, encrypted with a password if you want. Importing adds records back without replacing anything already there, then restores your profile settings from the backup.
+
+- Profile. Your avatar (a black badge with an icon you can tint), name and skill level, plus Settings, the policies, Support Smash and the version number.
+
+- Goals. Set a weekly or monthly target, like five sessions a week. The Dashboard counts play and training sessions toward it and lets you know when you hit it.
+
+No accounts, no analytics, no tracking. Your records are local by default; switch on iCloud in Settings if you want them on more than one device. Your profile (name, skill, avatar and goal) can also follow you through iCloud key-value storage when you're signed in.
+
+## Policies
+
+- [Privacy Policy](Docs/PRIVACY.md)
+- [Terms of Use](Docs/TERMS.md)
+- [Usage Guide](Docs/USAGE.md)
+
+These are linked from Profile in the app and used for the App Store policy fields.
 
 ## Design
 
-Smash follows Apple's Human Interface Guidelines and the [apple-design principles](https://github.com/emilkowalski/skills) distilled from Apple's WWDC design talks: spring-based interruptible motion, instant press feedback, materials over hard borders, system typography with Dynamic Type, and haptics that land on the same frame as the visual change.
+Smash follows Apple's Human Interface Guidelines. Motion is spring-based and interruptible, presses give instant feedback, materials sit over hard borders, and type scales with Dynamic Type. Haptics fire on the same frame as the visual change.
 
 ## Building
 
-Requirements: Xcode 16+ and [XcodeGen](https://github.com/yonaskolb/XcodeGen) (`brew install xcodegen`).
+You need Xcode 16+ and [XcodeGen](https://github.com/yonaskolb/XcodeGen) (`brew install xcodegen`).
 
 ```bash
 git clone https://github.com/ciscosub9/Smash.git
@@ -42,44 +67,39 @@ xcodegen generate   # creates Smash.xcodeproj from project.yml
 open Smash.xcodeproj
 ```
 
-Then select the **Smash** scheme and run on an iPhone simulator (⌘R).
-
-Run tests with **⌘U** (Swift Testing).
+Pick the **Smash** scheme and run it on an iPhone simulator with ⌘R. Tests run with ⌘U.
 
 ### iCloud sync
 
-iCloud sync uses CloudKit and requires the iCloud capability with your own development team:
+Sync uses CloudKit and needs the iCloud capability with your own development team.
 
-1. Open the generated project → **Smash target → Signing & Capabilities**.
-2. Add your team; the iCloud container `iCloud.com.smashapp.smash` is already declared.
-3. In-app, switch **Settings → Storage → iCloud**.
+1. Open the generated project, then **Smash target → Signing & Capabilities**.
+2. Add your team. The container `iCloud.com.smashapp.smash` is already declared.
+3. In the app, go to **Settings → Storage → iCloud**.
 
-Without the capability, the app gracefully stays on local storage.
+If the capability isn't there, the app just stays on local storage.
 
 ## Architecture
 
 ```
 Smash/
-├── Models/       SwiftData models: PlaySession, TrainingSession, Match, Tournament
-├── Services/     SmashStore (container + sync mode), Stats (pure aggregation logic)
-├── Views/        One folder per tab: Dashboard, Play, Matches, Training, Tournaments, Settings
+├── Models/       SwiftData models: PlaySession, TrainingSession, Match, Tournament, Player
+├── Services/     SmashStore (container + sync), Backup, Stats (pure aggregation logic)
+├── Views/        Dashboard, Sessions, Players, Tournaments, Profile, Settings
 ├── Design/       Shared components: press styles, stat cards, empty states
 └── Tests/        Swift Testing suites for scoring and stats logic
 ```
 
-- **Swift 6** with main-actor-by-default and approachable concurrency.
-- **SwiftData** for persistence; scoring and stats logic is pure and unit-tested, independent of the database.
-- No third-party dependencies.
+It's Swift 6 with main-actor-by-default isolation. SwiftData handles storage. Scoring and stats are pure functions with unit tests, so they don't depend on the database. No third-party dependencies.
 
 ## Contributing
 
-Issues and pull requests welcome — this project exists to be forked, improved, and played with. For large changes, open an issue first to discuss. Note that all contributions land under GPL-3.0.
+Issues and pull requests are welcome. If you're planning a big change, open an issue first so we can talk it through. All contributions land under GPL-3.0.
 
 ## License
 
-Smash is [free software](https://www.gnu.org/philosophy/free-sw.en.html), licensed under the [GNU General Public License v3.0](LICENSE).
+Smash is [free software](https://www.gnu.org/philosophy/free-sw.en.html) under the [GNU General Public License v3.0](LICENSE).
 
-- **Use, study, modify, share** — anyone may do all of these.
-- **Copyleft** — any fork or derivative, including commercial or App Store distributions, must be released under GPL-3.0 with its full source code. Closed-source clones of this code are not permitted.
-- **Attribution appreciated** — if you build on Smash, a credit and a link back to this repository are welcome.
-- **A note on the App Store** — the GPL is widely considered incompatible with Apple's App Store distribution terms (Apple's DRM and remote-review requirements don't fit the GPL's rules). As the copyright holder, I may still distribute my own builds on the App Store — the license doesn't bind the copyright owner. Anyone else doing so must comply with the GPL.
+You can use it, study it, change it and share it. If you fork it or build on it, including in a commercial or App Store release, you have to release your source under GPL-3.0 too. Closed-source copies aren't allowed. A credit and a link back here are welcome but not required.
+
+One wrinkle: the GPL is widely seen as incompatible with App Store distribution, since Apple's DRM and review rules don't fit the GPL's terms. As the copyright holder, I can still put my own builds on the App Store; the license doesn't bind me. If someone else wants to do that, they need to follow the GPL.

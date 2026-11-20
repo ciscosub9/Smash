@@ -3,16 +3,18 @@ import SwiftData
 import UniformTypeIdentifiers
 
 struct SettingsView: View {
+    /// When pushed from Profile, the surrounding NavigationStack is supplied
+    /// by ProfileView, so this view doesn't wrap itself in another one.
+    var embedded = false
+
     @Environment(SmashStore.self) private var store
     @Environment(\.modelContext) private var context
     @Environment(\.dismiss) private var dismiss
-    @AppStorage(AppearancePreference.storageKey) private var appearanceRaw = AppearancePreference.system.rawValue
+    @AppStorage(AppearancePreference.storageKey) private var appearanceRaw = AppearancePreference.dark.rawValue
+    @AppStorage(TimePreference.storageKey) private var timeFormatRaw = TimePreference.Format.twelveHour.rawValue
 
-    // Player profile
-    @AppStorage(PlayerProfile.nameKey) private var playerName = ""
-    @AppStorage(PlayerProfile.skillKey) private var playerSkillRaw = ""
-    @AppStorage(PlayerGoal.kindKey) private var goalKindRaw = GoalKind.none.rawValue
-    @AppStorage(PlayerGoal.targetKey) private var goalTarget = 3
+    // App tour
+    @State private var showTour = false
 
     // Export
     @State private var encryptExport = false
@@ -29,128 +31,114 @@ struct SettingsView: View {
     @State private var pendingStorageMode: SyncMode?
     @State private var migratingStorage = false
 
+    // Backup work (PBKDF2, JSON, file I/O) runs off the main actor.
+    @State private var processingBackup = false
+
     // Alerts
     @State private var importResult: String?
     @State private var errorMessage: String?
 
     var body: some View {
-        NavigationStack {
-            Form {
-                playerSection
-                appearanceSection
-                storageSection
-                dataSection
-                supportSection
-                aboutSection
-                Section {
-                    Text("Smash is free, open-source badminton tracking. Your data belongs to you.")
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
+        Group {
+            if embedded {
+                settingsContent
+            } else {
+                NavigationStack {
+                    settingsContent
+                        .toolbar {
+                            ToolbarItem(placement: .confirmationAction) {
+                                Button("Done") { dismiss() }
+                            }
+                        }
                 }
             }
-            .formStyle(.grouped)
-            .navigationTitle("Settings")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") { dismiss() }
-                }
-            }
-            .sheet(item: $shareFile) { file in
-                ActivityShareSheet(items: [file.url])
-            }
-            .fileImporter(isPresented: $showImporter, allowedContentTypes: [.json]) { result in
-                handleImportResult(result)
-            }
-            .alert(
-                "Encrypted backup",
-                isPresented: Binding(
-                    get: { pendingEncrypted != nil },
-                    set: { if !$0 { pendingEncrypted = nil } }
-                )
-            ) {
-                SecureField("Password", text: $importPassword)
-                Button("Import") { importEncrypted() }
-                Button("Cancel", role: .cancel) { pendingEncrypted = nil }
-            } message: {
-                Text("Enter the password this backup was encrypted with.")
-            }
-            .alert(
-                "Import complete",
-                isPresented: Binding(
-                    get: { importResult != nil },
-                    set: { if !$0 { importResult = nil } }
-                )
-            ) {
-                Button("OK", role: .cancel) {}
-            } message: {
-                Text(importResult ?? "")
-            }
-            .alert(
-                "Something went wrong",
-                isPresented: Binding(
-                    get: { errorMessage != nil },
-                    set: { if !$0 { errorMessage = nil } }
-                )
-            ) {
-                Button("OK", role: .cancel) {}
-            } message: {
-                Text(errorMessage ?? "")
-            }
-            .confirmationDialog(
-                pendingStorageMode == .iCloud ? "Move data to iCloud?" : "Move data to this iPhone?",
-                isPresented: Binding(
-                    get: { pendingStorageMode != nil },
-                    set: { if !$0 { pendingStorageMode = nil } }
-                ),
-                titleVisibility: .visible
-            ) {
-                Button("Move data") { performMigration() }
-                Button("Cancel", role: .cancel) { pendingStorageMode = nil }
-            } message: {
-                Text("Your current play, training, matches and tournaments will be copied to \(pendingStorageMode?.label ?? "the other storage"). The two stores stay separate after this.")
-            }
-            .overlay {
-                if migratingStorage {
-                    ProgressView("Moving your data…")
-                        .padding(20)
-                        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16))
-                }
+        }
+    }
+
+    private var settingsContent: some View {
+        Form {
+            personalizationSection
+            storageSection
+            dataSection
+            moreSection
+        }
+        .formStyle(.grouped)
+        .navigationTitle("Settings")
+        .navigationBarTitleDisplayMode(.inline)
+        .sheet(item: $shareFile) { file in
+            ActivityShareSheet(items: [file.url])
+        }
+        .onChange(of: shareFile) { oldFile, _ in
+            // The share sheet sets shareFile to nil when it dismisses: delete
+            // the previous temp export as soon as we're done with it.
+            if let oldFile { Self.removeBackup(at: oldFile.url) }
+        }
+        .sheet(isPresented: $showTour) {
+            AppTourView()
+        }
+        .fileImporter(isPresented: $showImporter, allowedContentTypes: [.json]) { result in
+            handleImportResult(result)
+        }
+        .alert(
+            "Encrypted backup",
+            isPresented: Binding(
+                get: { pendingEncrypted != nil },
+                set: { if !$0 { pendingEncrypted = nil } }
+            )
+        ) {
+            SecureField("Password", text: $importPassword)
+            Button("Import") { importEncrypted() }
+            Button("Cancel", role: .cancel) { pendingEncrypted = nil }
+        } message: {
+            Text("Enter the password this backup was encrypted with.")
+        }
+        .alert(
+            "Import complete",
+            isPresented: Binding(
+                get: { importResult != nil },
+                set: { if !$0 { importResult = nil } }
+            )
+        ) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text("\(importResult ?? "")\n\nYour name, skill, avatar, colour and goal were restored from the backup.")
+        }
+        .alert(
+            "Something went wrong",
+            isPresented: Binding(
+                get: { errorMessage != nil },
+                set: { if !$0 { errorMessage = nil } }
+            )
+        ) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(errorMessage ?? "")
+        }
+        .confirmationDialog(
+            pendingStorageMode == .iCloud ? "Move data to iCloud?" : "Move data to this iPhone?",
+            isPresented: Binding(
+                get: { pendingStorageMode != nil },
+                set: { if !$0 { pendingStorageMode = nil } }
+            ),
+            titleVisibility: .visible
+        ) {
+            Button("Move data") { performMigration() }
+            Button("Cancel", role: .cancel) { pendingStorageMode = nil }
+        } message: {
+            Text("Your play, training, matches and tournaments will be copied to \(pendingStorageMode?.label ?? "the other storage"). The two stores stay separate after this.")
+        }
+        .overlay {
+            if migratingStorage || processingBackup {
+                ProgressView(migratingStorage ? "Moving your data…" : "Working with your backup…")
+                    .padding(20)
+                    .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16))
             }
         }
     }
 
     // MARK: - Sections
 
-    private var playerSection: some View {
-        Section {
-            TextField("Your name", text: $playerName)
-                .textInputAutocapitalization(.words)
-            Picker("Skill level", selection: $playerSkillRaw) {
-                Text("Not set").tag("")
-                ForEach(SkillLevel.allCases) { level in
-                    Text(level.label).tag(level.rawValue)
-                }
-            }
-            Picker("Activity goal", selection: $goalKindRaw) {
-                ForEach(GoalKind.allCases) { kind in
-                    Text(kind.label).tag(kind.rawValue)
-                }
-            }
-            if let kind = GoalKind(rawValue: goalKindRaw), kind != .none {
-                Stepper(value: $goalTarget, in: kind.targetRange) {
-                    Text("\(goalTarget) sessions a \(kind.unit)")
-                        .monospacedDigit()
-                }
-            }
-        } header: {
-            Text("Player profile")
-        } footer: {
-            Text("You. The same levels (Beginner → Professional) can be set for each opponent on a match. The goal counts play and training sessions — the Dashboard tracks your progress.")
-        }
-    }
-
-    private var appearanceSection: some View {
+    private var personalizationSection: some View {
         Section {
             Picker("Appearance", selection: Binding(
                 get: { AppearancePreference(rawValue: appearanceRaw) ?? .system },
@@ -162,10 +150,25 @@ struct SettingsView: View {
             }
             .pickerStyle(.segmented)
             .labelsHidden()
+
+            Picker("Time format", selection: Binding(
+                get: { TimePreference.Format(rawValue: timeFormatRaw) ?? .twelveHour },
+                set: { timeFormatRaw = $0.rawValue }
+            )) {
+                ForEach(TimePreference.Format.allCases) { format in
+                    Text(format.label).tag(format)
+                }
+            }
+            .pickerStyle(.segmented)
+            .labelsHidden()
+
+            Button {
+                showTour = true
+            } label: {
+                Label("Replay app tour", systemImage: "hand.point.up.left")
+            }
         } header: {
-            Text("Appearance")
-        } footer: {
-            Text("Automatic follows your iPhone's system setting. There's also a quick switch on the Dashboard.")
+            Text("Personalization")
         }
     }
 
@@ -204,6 +207,14 @@ struct SettingsView: View {
                 .foregroundStyle(.orange)
             }
         }
+
+        if let storeError = store.storeError {
+            Section {
+                Label(storeError, systemImage: "exclamationmark.triangle")
+                    .font(.footnote)
+                    .foregroundStyle(.orange)
+            }
+        }
     }
 
     private func performMigration() {
@@ -213,7 +224,7 @@ struct SettingsView: View {
         Task { @MainActor in
             defer { migratingStorage = false }
             do {
-                if let summary = try store.migrate(to: mode, from: context) {
+                if let summary = try await store.migrate(to: mode, from: context) {
                     importResult = "Moved to \(mode.label). \(summary.description)"
                 } else if store.iCloudUnavailable {
                     errorMessage = "iCloud isn't available for Smash right now. Your data stayed on \(store.syncMode.label)."
@@ -241,39 +252,34 @@ struct SettingsView: View {
             } label: {
                 Label("Export Data", systemImage: "square.and.arrow.up")
             }
-            .disabled(passwordInvalid)
+            .disabled(passwordInvalid || processingBackup || migratingStorage)
             Button {
                 showImporter = true
             } label: {
                 Label("Import Data", systemImage: "square.and.arrow.down")
             }
+            .disabled(processingBackup || migratingStorage)
         } header: {
             Text("Data")
         } footer: {
             Text(encryptExport
-                 ? "Exports a password-encrypted file (AES-256). Without the password, the data can't be recovered — keep it safe."
-                 : "Exports a readable JSON file you can share or archive. Import adds records from a file; existing records are never replaced.")
+                 ? "Exports a password-encrypted file (AES-256). Without the password, the data can't be recovered — keep it safe. Import adds records without replacing any, then restores your profile settings from the backup."
+                 : "Exports a readable JSON file you can share or archive. Import adds records without replacing any, then restores your name, skill, avatar, colour and goal from the backup.")
         }
     }
 
-    private var supportSection: some View {
-        Section("Support") {
-            Link(destination: AppLinks.buyMeACoffee) {
-                Label("Buy me a coffee", systemImage: "cup.and.saucer.fill")
-            }
+    private var moreSection: some View {
+        Section {
             Link(destination: AppLinks.feedback) {
                 Label("Send feedback", systemImage: "envelope")
             }
-        }
-    }
-
-    private var aboutSection: some View {
-        Section("About") {
-            LabeledContent("Version", value: appVersion)
             Link(destination: AppLinks.sourceCode) {
                 Label("Source on GitHub", systemImage: "link")
             }
-            LabeledContent("License", value: "GPL-3.0")
+        } header: {
+            Text("More")
+        } footer: {
+            Text("Smash is free, open-source badminton tracking. Your data belongs to you.")
         }
     }
 
@@ -288,19 +294,46 @@ struct SettingsView: View {
     }
 
     private func exportData() {
+        // Reading the store belongs on the main actor; encoding, encryption
+        // and file I/O are pushed to a detached task below.
+        let bundle: BackupBundle
         do {
-            var data = try Backup.exportData(context: context)
-            if encryptExport {
-                data = try BackupCrypto.encrypt(data, password: exportPassword)
-            }
-            let stamp = DateFormatter.backupStamp.string(from: .now)
-            let url = FileManager.default.temporaryDirectory
-                .appendingPathComponent("Smash-Backup-\(stamp).json")
-            try data.write(to: url, options: .atomic)
-            shareFile = ShareableFile(url: url)
+            bundle = try Backup.makeBundle(context: context)
         } catch {
             errorMessage = error.localizedDescription
+            return
         }
+        let password = exportPassword
+        let encrypted = encryptExport
+        processingBackup = true
+        Task { @MainActor in
+            defer { processingBackup = false }
+            do {
+                let url = try await Task.detached(priority: .userInitiated) {
+                    var bytes = try Backup.encode(bundle)
+                    if encrypted { bytes = try BackupCrypto.encrypt(bytes, password: password) }
+                    return try Self.writeBackup(bytes)
+                }.value
+                shareFile = ShareableFile(url: url)
+            } catch {
+                errorMessage = error.localizedDescription
+            }
+        }
+    }
+
+    private nonisolated static func writeBackup(_ data: Data) throws -> URL {
+        // Keep the .json extension so the file importer still accepts encrypted
+        // backups (they are JSON too). UUID avoids collisions; complete file
+        // protection keeps the records at rest until the device is unlocked.
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent("Smash-Backup-\(UUID().uuidString).json")
+        try data.write(to: url, options: [.atomic, .completeFileProtection])
+        return url
+    }
+
+    private nonisolated static func removeBackup(at url: URL) {
+        guard url.path.hasPrefix(FileManager.default.temporaryDirectory.path) else { return }
+        try? FileManager.default.removeItem(at: url)
     }
 
     // MARK: - Import
@@ -314,43 +347,79 @@ struct SettingsView: View {
         }
     }
 
-    private func importFrom(_ url: URL) {
+    private enum LoadedBackup: Sendable {
+        case plaintext(ValidatedBackup)
+        case encrypted(Data)
+    }
+
+    /// File access, size limit, decryption detection and JSON validation all
+    /// happen in a detached task. The security scope is taken there too so it
+    /// stays active for the whole read.
+    private nonisolated static func loadBackup(from url: URL) throws -> LoadedBackup {
         let gotAccess = url.startAccessingSecurityScopedResource()
         defer { if gotAccess { url.stopAccessingSecurityScopedResource() } }
-        do {
-            let data = try Data(contentsOf: url)
-            if BackupCrypto.isEncrypted(data) {
-                importPassword = ""
-                pendingEncrypted = data
-            } else {
-                importResult = try Backup.importData(data, into: context).description
+
+        let values = try url.resourceValues(forKeys: [.fileSizeKey])
+        if let size = values.fileSize, size > BackupFormat.maxBackupBytes {
+            throw Backup.Failure(message: "That file is over 50 MB — too large to import.")
+        }
+        let data = try Data(contentsOf: url)
+        if BackupCrypto.isEncrypted(data) {
+            return .encrypted(data)
+        }
+        return .plaintext(try Backup.prepare(data))
+    }
+
+    private func importFrom(_ url: URL) {
+        processingBackup = true
+        Task { @MainActor in
+            defer { processingBackup = false }
+            do {
+                let loaded = try await Task.detached(priority: .userInitiated) {
+                    try Self.loadBackup(from: url)
+                }.value
+                switch loaded {
+                case .encrypted(let data):
+                    importPassword = ""
+                    pendingEncrypted = data
+                case .plaintext(let validated):
+                    try applyBackup(validated)
+                }
+            } catch {
+                errorMessage = error.localizedDescription
             }
-        } catch {
-            errorMessage = error.localizedDescription
         }
     }
 
     private func importEncrypted() {
         guard let data = pendingEncrypted else { return }
         pendingEncrypted = nil
-        do {
-            let plain = try BackupCrypto.decrypt(data, password: importPassword)
-            importResult = try Backup.importData(plain, into: context).description
-        } catch {
-            errorMessage = error.localizedDescription
+        let password = importPassword
+        processingBackup = true
+        Task { @MainActor in
+            defer { processingBackup = false }
+            do {
+                let validated = try await Task.detached(priority: .userInitiated) {
+                    try Backup.prepare(BackupCrypto.decrypt(data, password: password))
+                }.value
+                try applyBackup(validated)
+            } catch {
+                errorMessage = error.localizedDescription
+            }
         }
     }
 
-    private var appVersion: String {
-        let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "–"
-        let build = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "–"
-        return "\(version) (\(build))"
+    /// The only step that touches SwiftData and UserDefaults, after every
+    /// byte has been decoded, bounded and validated.
+    @MainActor private func applyBackup(_ validated: ValidatedBackup) throws {
+        importResult = try Backup.apply(validated, into: context).description
     }
+
 }
 
 // MARK: - Share plumbing
 
-private struct ShareableFile: Identifiable {
+private struct ShareableFile: Identifiable, Equatable {
     let url: URL
     var id: URL { url }
 }
@@ -364,13 +433,4 @@ private struct ActivityShareSheet: UIViewControllerRepresentable {
     }
 
     func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
-}
-
-private extension DateFormatter {
-    /// File-name-safe timestamp: "2026-11-17-1430".
-    static let backupStamp: DateFormatter = {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd-HHmm"
-        return formatter
-    }()
 }

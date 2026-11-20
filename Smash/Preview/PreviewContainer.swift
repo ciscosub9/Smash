@@ -26,6 +26,15 @@ enum SampleData {
         PlayerGoal.kind = .weekly
         PlayerGoal.target = 3
 
+        let savedPlayers = [
+            Player(name: "Ravi", level: .advanced, notes: "Flat kills off a low serve."),
+            Player(name: "Anil", level: .intermediate),
+            Player(name: "Priya", level: .intermediate),
+            Player(name: "Marcus", level: .beginner),
+            Player(name: "Mei", level: .advanced),
+        ]
+        savedPlayers.forEach { context.insert($0) }
+
         func at(dayOffset: Int, hour: Int, minute: Int = 0) -> Date {
             let day = calendar.date(byAdding: .day, value: dayOffset, to: now) ?? now
             return calendar.date(bySettingHour: hour, minute: minute, second: 0, of: day) ?? day
@@ -63,20 +72,20 @@ enum SampleData {
                   myGameScores: [21, 18, 22], opponentGameScores: [15, 21, 20],
                   notes: "Slow start in game two — stayed patient in the decider (deuce).",
                   opponentLevel: .intermediate, intensity: .hard),
-            Match(date: at(dayOffset: -3, hour: 18), opponent: "Anil", discipline: .doubles, pointSystem: .points15, format: .singleGame,
+            Match(date: at(dayOffset: -3, hour: 18), opponent: "Anil", partner: "Sanjay", discipline: .doubles, pointSystem: .points15, format: .singleGame,
                   myGameScores: [15], opponentGameScores: [11],
                   opponentLevel: .beginner, intensity: .easy),
             Match(date: at(dayOffset: -4, hour: 20), opponent: "Ravi", discipline: .singles, pointSystem: .continuous, format: .singleGame,
                   myGameScores: [38], opponentGameScores: [41],
                   notes: "Long continuous rally session — focus was consistency.",
                   opponentLevel: .intermediate, intensity: .moderate),
-            Match(date: at(dayOffset: -6, hour: 19), opponent: "Meera", discipline: .mixedDoubles, pointSystem: .points21, format: .bestOf3,
+            Match(date: at(dayOffset: -6, hour: 19), opponent: "Meera", partner: "Priya", discipline: .mixedDoubles, pointSystem: .points21, format: .bestOf3,
                   myGameScores: [21, 21], opponentGameScores: [17, 19],
                   notes: "Good net control with partner.", opponentLevel: .advanced, intensity: .hard),
             Match(date: at(dayOffset: -8, hour: 18, minute: 30), opponent: "Sanjay", discipline: .singles, pointSystem: .points21, format: .singleGame,
                   myGameScores: [30], opponentGameScores: [29],
                   notes: "Reached the 30-point cap — marathon game.", opponentLevel: .advanced, intensity: .hard),
-            Match(date: at(dayOffset: -10, hour: 17), opponent: "Priya", discipline: .doubles, pointSystem: .points15, format: .bestOf3,
+            Match(date: at(dayOffset: -10, hour: 17), opponent: "Priya", partner: "Anil", discipline: .doubles, pointSystem: .points15, format: .bestOf3,
                   myGameScores: [15, 13, 21], opponentGameScores: [9, 15, 20],
                   notes: "Tight decider at the 21 cap.", opponentLevel: .intermediate, intensity: .moderate, tournament: roundRobin),
             Match(date: at(dayOffset: -12, hour: 20), opponent: "Kiran", discipline: .singles, pointSystem: .points21, format: .bestOf3,
@@ -88,13 +97,13 @@ enum SampleData {
             Match(date: at(dayOffset: -16, hour: 18), opponent: "Ravi", discipline: .singles, pointSystem: .points21, format: .bestOf3,
                   myGameScores: [21, 22], opponentGameScores: [18, 20],
                   opponentLevel: .intermediate, intensity: .hard, tournament: ladder),
-            Match(date: at(dayOffset: -18, hour: 19, minute: 15), opponent: "Meera", discipline: .mixedDoubles, pointSystem: .points15, format: .singleGame,
+            Match(date: at(dayOffset: -18, hour: 19, minute: 15), opponent: "Meera", partner: "Priya", discipline: .mixedDoubles, pointSystem: .points15, format: .singleGame,
                   myGameScores: [12], opponentGameScores: [15],
                   opponentLevel: .advanced, intensity: .hard, tournament: ladder),
             Match(date: at(dayOffset: -21, hour: 18), opponent: "Sanjay", discipline: .singles, pointSystem: .points21, format: .bestOf3,
                   myGameScores: [21, 16, 21], opponentGameScores: [19, 21, 17],
                   opponentLevel: .advanced, intensity: .hard, tournament: ladder),
-            Match(date: at(dayOffset: -23, hour: 17, minute: 30), opponent: "Priya", discipline: .doubles, pointSystem: .continuous, format: .singleGame,
+            Match(date: at(dayOffset: -23, hour: 17, minute: 30), opponent: "Priya", partner: "Anil", discipline: .doubles, pointSystem: .continuous, format: .singleGame,
                   myGameScores: [45], opponentGameScores: [39],
                   opponentLevel: .intermediate, intensity: .moderate),
             Match(date: at(dayOffset: -26, hour: 14), opponent: "Ravi", discipline: .singles, pointSystem: .points21, format: .bestOf3,
@@ -104,9 +113,13 @@ enum SampleData {
             Match(date: at(dayOffset: -27, hour: 10), opponent: "Kiran", discipline: .singles, pointSystem: .points21, format: .bestOf3,
                   myGameScores: [21, 21], opponentGameScores: [12, 14],
                   opponentLevel: .amateur, intensity: .moderate, tournament: clubOpen),
-            Match(date: at(dayOffset: -29, hour: 18), opponent: "Anil", discipline: .doubles, pointSystem: .points15, format: .singleGame,
+            Match(date: at(dayOffset: -29, hour: 18), opponent: "Anil", partner: "Sanjay", discipline: .doubles, pointSystem: .points15, format: .singleGame,
                   myGameScores: [16], opponentGameScores: [14],
                   opponentLevel: .beginner, intensity: .easy),
+            // Logged together with the play session below — one card in Sessions.
+            Match(date: at(dayOffset: -2, hour: 17), opponent: "Kiran", discipline: .singles, pointSystem: .points21, format: .bestOf3,
+                  myGameScores: [21, 16, 21], opponentGameScores: [18, 21, 19],
+                  notes: "Close decider — kept the net game tight.", opponentLevel: .intermediate, intensity: .moderate),
         ]
         matches.forEach { context.insert($0) }
 
@@ -115,6 +128,7 @@ enum SampleData {
             (0,  18, 30, 75, .singles,     .moderate, "Courts Club", ["Ravi"],                "Quick evening hit after work."),
             (1,  19,  0, 90, .doubles,     .hard,     "Courts Club", ["Ravi", "Anil"],        "Fast doubles — lots of net exchanges."),
             (2,  10,  0, 60, .mixedDoubles,.moderate, "City Sports Hall", ["Meera"],          "Weekend mixed session."),
+            (2,  17,  0, 75, .singles,     .moderate, "Courts Club", ["Kiran"],               "Scored session with a tight third game."),
             (3,  18,  0, 45, .singles,     .easy,     "Courts Club", ["Kiran"],               "Light rally, focused on clears."),
             (5,  19, 30, 80, .doubles,     .hard,     "Courts Club", ["Priya", "Sanjay"],     nil),
             (6,  9,   0, 70, .singles,     .moderate, "Park Courts", ["Ravi"],                "Outdoor courts — wind made drops tricky."),
@@ -147,47 +161,48 @@ enum SampleData {
             ))
         }
 
-        // MARK: - Training sessions (varied drills, coaches, focus areas)
-        let trainingData: [(Int, Int, Int, Int, String?, [String], String, String?, Int?, Intensity?, String?)] = [
-            (1,  17,  0, 90, "Coach Manoj", [TrainingFocus.footwork.label, TrainingFocus.smashes.label],
-             "Shadow footwork 3×10, half-court smash rallies, net kill practice.", "Multi-shuttle", 6, .hard,
+        // MARK: - Training sessions (varied drills, each with its own load)
+        let trainingData: [(Int, Int, Int, Int, [String], String, [String], [Int], [Intensity?], String?)] = [
+            (1,  17,  0, 90, [TrainingFocus.footwork.label, TrainingFocus.smashes.label],
+             "Shadow footwork 3×10, half-court smash rallies, net kill practice.", ["Multi-shuttle", "Net kills"], [6, 4], [.hard, .moderate],
              "Lunge depth improving — keep an eye on right-knee position."),
-            (4,  18,  0, 60, "Coach Manoj", [TrainingFocus.clears.label, TrainingFocus.defense.label],
-             "High clear consistency, defensive lifts under pressure.", "Clear drills", 5, .moderate, nil),
-            (7,  17, 30, 75, "Coach Leena", [TrainingFocus.netPlay.label, TrainingFocus.serves.label],
-             "Short serve accuracy ladder, spin net shots, tumble net kills.", "Serve accuracy", 8, .moderate,
+            (4,  18,  0, 60, [TrainingFocus.clears.label, TrainingFocus.defense.label],
+             "High clear consistency, defensive lifts under pressure.", ["Clear drills", "Lifts"], [5, 5], [.moderate, .easy], nil),
+            (7,  17, 30, 75, [TrainingFocus.netPlay.label, TrainingFocus.serves.label],
+             "Short serve accuracy ladder, spin net shots, tumble net kills.", ["Serve accuracy", "Net shots"], [8, 6], [.moderate, .moderate],
              "Serve toss is more consistent now."),
-            (9,  18,  0, 50, nil, [TrainingFocus.drops.label, TrainingFocus.strategy.label],
-             "Cross-court drops, deception practice, rally patterns.", "Drop shots", 4, .easy, nil),
-            (11, 17,  0, 90, "Coach Manoj", [TrainingFocus.footwork.label, TrainingFocus.defense.label],
-             "Split-step timing, corner-to-corner drives, block defense.", "Shadow footwork", 6, .hard,
+            (9,  18,  0, 50, [TrainingFocus.drops.label, TrainingFocus.strategy.label],
+             "Cross-court drops, deception practice, rally patterns.", ["Drop shots"], [4], [.easy], nil),
+            (11, 17,  0, 90, [TrainingFocus.footwork.label, TrainingFocus.defense.label],
+             "Split-step timing, corner-to-corner drives, block defense.", ["Shadow footwork", "Block defense"], [6, 6], [.hard, .moderate],
              "Recovery to base still a beat slow on the backhand side."),
-            (14, 18, 30, 60, "Coach Leena", [TrainingFocus.smashes.label, TrainingFocus.netPlay.label],
-             "Jump smash timing, follow-up net kill, rotation work.", "Smash practice", 5, .hard, nil),
-            (17, 17,  0, 45, nil, [TrainingFocus.serves.label],
-             "Flick serve variation, low serve tightness.", "Serve accuracy", 7, .easy, nil),
-            (20, 18,  0, 80, "Coach Manoj", [TrainingFocus.footwork.label, TrainingFocus.clears.label, TrainingFocus.drops.label],
-             "Full-court movement, clear-drop combinations, endurance rally.", "Footwork ladder", 6, .hard,
+            (14, 18, 30, 60, [TrainingFocus.smashes.label, TrainingFocus.netPlay.label],
+             "Jump smash timing, follow-up net kill, rotation work.", ["Smash practice", "Net kills"], [5, 4], [.hard, .moderate], nil),
+            (17, 17,  0, 45, [TrainingFocus.serves.label],
+             "Flick serve variation, low serve tightness.", ["Serve accuracy"], [7], [.easy], nil),
+            (20, 18,  0, 80, [TrainingFocus.footwork.label, TrainingFocus.clears.label, TrainingFocus.drops.label],
+             "Full-court movement, clear-drop combinations, endurance rally.", ["Footwork ladder", "Clear drills", "Drop shots"], [6, 6, 4], [.hard, .moderate, .moderate],
              "Good stamina today — kept intensity through the last set."),
-            (23, 17, 30, 55, "Coach Leena", [TrainingFocus.defense.label, TrainingFocus.strategy.label],
-             "Drive defense, counter-attack patterns, reading the opponent's body.", "Defense drills", 4, .moderate, nil),
-            (26, 18,  0, 70, "Coach Manoj", [TrainingFocus.netPlay.label, TrainingFocus.drops.label],
-             "Net kill pressure, tight spinning net shots, cross-court net exchanges.", "Net shots", 5, .moderate, nil),
-            (29, 17,  0, 60, nil, [TrainingFocus.footwork.label, TrainingFocus.serves.label],
-             "Agility ladder, serve placement targets.", "Conditioning", 3, .easy,
+            (23, 17, 30, 55, [TrainingFocus.defense.label, TrainingFocus.strategy.label],
+             "Drive defense, counter-attack patterns, reading the opponent's body.", ["Defense drills"], [4], [.moderate], nil),
+            (26, 18,  0, 70, [TrainingFocus.netPlay.label, TrainingFocus.drops.label],
+             "Net kill pressure, tight spinning net shots, cross-court net exchanges.", ["Net shots", "Drop shots"], [5, 5], [.moderate, .easy], nil),
+            (29, 17,  0, 60, [TrainingFocus.footwork.label, TrainingFocus.serves.label],
+             "Agility ladder, serve placement targets.", ["Conditioning"], [3], [.easy],
              "Light session before the new month."),
         ]
         for item in trainingData {
             context.insert(TrainingSession(
                 date: at(dayOffset: -item.0, hour: item.1, minute: item.2),
                 durationMinutes: item.3,
-                coach: item.4,
-                focusAreas: item.5,
-                drillsDescription: item.6,
-                drillName: item.7,
-                setsDone: item.8,
-                intensity: item.9,
-                notes: item.10
+                focusAreas: item.4,
+                drillsDescription: item.5,
+                drillNames: item.6,
+                drillSets: item.7,
+                drillIntensities: item.8.map { $0?.rawValue ?? "" },
+                setsDone: item.7.first,
+                intensity: item.8.first ?? nil,
+                notes: item.9
             ))
         }
     }

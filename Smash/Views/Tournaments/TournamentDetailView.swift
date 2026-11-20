@@ -4,6 +4,7 @@ import SwiftData
 struct TournamentDetailView: View {
     @Bindable var tournament: Tournament
     @Environment(\.modelContext) private var context
+    @Environment(\.dismiss) private var dismiss
 
     @State private var showEdit = false
     @State private var showAddMatch = false
@@ -27,17 +28,17 @@ struct TournamentDetailView: View {
                                 .padding(.horizontal, 10)
                                 .padding(.vertical, 4)
                                 .background(Color.orange.opacity(0.15), in: Capsule())
-                                .foregroundStyle(.orange)
+                                .foregroundStyle(SmashColor.warningText)
                         }
                     }
 
                     HStack(spacing: 0) {
-                        resultStat("\(tournament.wins)", label: "Wins", tint: .green)
-                        resultStat("\(tournament.losses)", label: "Losses", tint: .red)
+                        resultStat("\(tournament.wins)", label: "Wins", tint: SmashColor.winText)
+                        resultStat("\(tournament.losses)", label: "Losses", tint: SmashColor.lossText)
                         resultStat(
                             tournament.matchList.isEmpty ? "–" : tournament.winRate.formatted(.percent),
                             label: "Win rate",
-                            tint: .blue
+                            tint: SmashColor.infoText
                         )
                     }
                 }
@@ -99,6 +100,7 @@ struct TournamentDetailView: View {
         ) {
             Button("Delete tournament", role: .destructive) {
                 context.delete(tournament)
+                dismiss()
             }
         } message: {
             Text("Its matches stay in your match history but will no longer belong to a tournament.")
@@ -112,15 +114,22 @@ struct TournamentDetailView: View {
                 .foregroundStyle(tint)
                 .monospacedDigit()
             Text(label)
-                .font(.caption2)
+                .font(.caption)
                 .foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity)
     }
 
     private func deleteMatch(at offsets: IndexSet) {
-        for index in offsets {
-            context.delete(sortedMatches[index])
+        // Snapshot the displayed order once, then delete by stable model
+        // identity. Deleting inside the loop would shift a live sorted array
+        // and could remove the wrong match (or run past its end).
+        let shown = sortedMatches
+        let ids = Set(offsets.compactMap { index in
+            shown.indices.contains(index) ? shown[index].id : nil
+        })
+        for match in tournament.matchList where ids.contains(match.id) {
+            context.delete(match)
         }
     }
 }

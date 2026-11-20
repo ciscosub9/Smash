@@ -10,7 +10,7 @@
 	<array>
 		<string>iCloud.com.smashapp.smash</string>
 	</array>
-	<key>aps-environment</key>
-	<string>development</string>
+	<key>com.apple.developer.ubiquity-kvstore-identifier</key>
+	<string>$(TeamIdentifierPrefix)com.smashapp.smash</string>
 </dict>
 </plist>

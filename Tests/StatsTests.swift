@@ -91,6 +91,18 @@ struct StatsTests {
         #expect(records.first { $0.label == "Ravi" }?.winRate == 0.5)
     }
 
+    @Test("Record ties break by opponent label in either direction")
+    func recordOrderingIsDeterministic() {
+        let matches = [
+            Match(opponent: "Zoe", myGameScores: [21], opponentGameScores: [10]),
+            Match(opponent: "Anil", myGameScores: [21], opponentGameScores: [10]),
+            Match(opponent: "Mina", myGameScores: [21], opponentGameScores: [10]),
+        ]
+
+        #expect(Stats.recordsByOpponent(matches).map(\.label) == ["Anil", "Mina", "Zoe"])
+        #expect(Stats.recordsByOpponent(matches, ascending: true).map(\.label) == ["Anil", "Mina", "Zoe"])
+    }
+
     // MARK: Point system record
 
     @Test("Record filters by point system")
@@ -135,6 +147,56 @@ struct StatsTests {
         let streak = Stats.currentStreak(matches)
         #expect(streak?.kind == .win)
         #expect(streak?.count == 3)
+    }
+
+    @Test("Current streak: matches on the same date have a stable order")
+    func currentStreakBreaksDateTies() {
+        let sameDate = calendar.date(from: DateComponents(year: 2026, month: 11, day: 18, hour: 12))!
+        let earlier = calendar.date(byAdding: .day, value: -1, to: sameDate)!
+        let matches = [
+            Match(date: sameDate, opponent: "B", myGameScores: [10], opponentGameScores: [21]), // loss
+            Match(date: earlier, opponent: "A", myGameScores: [21], opponentGameScores: [10]),   // win
+            Match(date: sameDate, opponent: "A", myGameScores: [21], opponentGameScores: [10]),  // win
+        ]
+
+        // "A" sorts before "B" at the newest timestamp, so the win is first.
+        let permutations: [[Match]] = [
+            matches,
+            Array(matches.reversed()),
+            [matches[2], matches[0], matches[1]],
+        ]
+        for order in permutations {
+            let streak = Stats.currentStreak(Array(order))
+            #expect(streak?.kind == .win)
+            #expect(streak?.count == 1)
+        }
+    }
+
+    @Test("Negative durations are clamped at every aggregation point")
+    func negativeDurationsClamped() {
+        let date = calendar.date(from: DateComponents(year: 2026, month: 11, day: 18, hour: 12))!
+        let interval = calendar.dateInterval(of: .day, for: date)!
+        let play = [
+            PlaySession(date: date, durationMinutes: -120),
+            PlaySession(date: date, durationMinutes: 60),
+        ]
+        let training = [
+            TrainingSession(date: date, durationMinutes: -30),
+            TrainingSession(date: date, durationMinutes: 45),
+        ]
+
+        #expect(Stats.totalMinutes(play) == 60)
+        #expect(Stats.totalMinutes(play: play, training: training, in: interval) == 105)
+        #expect(Stats.dailyActivity(
+            play: play, training: training, endingOn: date, days: 1, calendar: calendar
+        ).first?.playMinutes == 60)
+        #expect(Stats.dailyActivity(
+            play: play, training: training, endingOn: date, days: 1, calendar: calendar
+        ).first?.trainingMinutes == 45)
+        #expect(Stats.dailyActivity(
+            play: play, training: training, in: interval, calendar: calendar
+        ).first?.totalMinutes == 105)
+        #expect(Stats.sessions(play: play, training: training, in: interval) == 4)
     }
 }
 
@@ -242,5 +304,145 @@ struct GoalProgressTests {
             calendar: calendar,
             now: now
         ) == 2)
+    }
+
+    @Test("Weekly interval starts on Monday even for a Sunday-first calendar")
+    func weeklyIntervalStartsMonday() throws {
+        var sundayFirst = Calendar(identifier: .gregorian)
+        sundayFirst.timeZone = TimeZone(identifier: "UTC")!
+        sundayFirst.firstWeekday = 1
+
+        let sunday = sundayFirst.date(from: DateComponents(year: 2026, month: 11, day: 15, hour: 10))!
+        let interval = try #require(Stats.weekInterval(at: sunday, calendar: sundayFirst))
+        // Sunday 15 November closes the Monday week that began on 9 November.
+        let monday = sundayFirst.date(from: DateComponents(year: 2026, month: 11, day: 9))!
+        #expect(interval.start == monday)
+        #expect(sundayFirst.component(.weekday, from: interval.start) == 2)
+    }
+
+    @Test("Goal streak uses Monday weeks regardless of the caller's firstWeekday")
+    func goalStreakUsesCanonicalWeeklyCalendar() {
+        var sundayFirst = Calendar(identifier: .gregorian)
+        sundayFirst.timeZone = TimeZone(identifier: "UTC")!
+        sundayFirst.firstWeekday = 1
+        var mondayFirst = sundayFirst
+        mondayFirst.firstWeekday = 2
+
+        // Wednesday. The current Monday week has one session so it is still
+        // unfinished; the previous two Monday weeks each have two sessions,
+        // including a Sunday in each that a Sunday-first calendar would move.
+        let now = sundayFirst.date(from: DateComponents(year: 2026, month: 11, day: 18, hour: 12))!
+        func date(_ month: Int, _ day: Int) -> Date {
+            sundayFirst.date(from: DateComponents(year: 2026, month: month, day: day, hour: 10))!
+        }
+        let play = [
+            PlaySession(date: date(11, 16)), // this week: 1 of 2
+            PlaySession(date: date(11, 14)), // Saturday of last Monday week
+            PlaySession(date: date(11, 15)), // Sunday of last Monday week
+            PlaySession(date: date(11, 2)),  // Monday two weeks ago
+            PlaySession(date: date(11, 8)),  // Sunday two weeks ago
+        ]
+
+        let mondayStreak = Stats.goalStreak(
+            play: play, training: [], kind: .weekly, target: 2,
+            calendar: mondayFirst, now: now
+        )
+        let sundayStreak = Stats.goalStreak(
+            play: play, training: [], kind: .weekly, target: 2,
+            calendar: sundayFirst, now: now
+        )
+        #expect(mondayStreak == 2)
+        #expect(sundayStreak == mondayStreak)
+    }
+}
+
+// MARK: - Dashboard period math
+
+@Suite("Dashboard period aggregation")
+struct DashboardPeriodTests {
+    private var calendar: Calendar {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "UTC")!
+        calendar.firstWeekday = 2
+        return calendar
+    }
+
+    private var now: Date {
+        calendar.date(from: DateComponents(year: 2026, month: 11, day: 18, hour: 12))!
+    }
+
+    @Test("Chart buckets cover the whole interval and ignore outside sessions")
+    func chartBuckets() {
+        let week = calendar.dateInterval(of: .weekOfYear, for: now)!
+        let play = [
+            PlaySession(date: week.start, durationMinutes: 60),
+            PlaySession(date: calendar.date(byAdding: .day, value: 1, to: week.start)!, durationMinutes: 30),
+            PlaySession(date: calendar.date(byAdding: .day, value: -1, to: week.start)!, durationMinutes: 999),
+        ]
+        let training = [
+            TrainingSession(date: week.start, durationMinutes: 45),
+        ]
+
+        let activity = Stats.dailyActivity(play: play, training: training, in: week, calendar: calendar)
+
+        #expect(activity.count == 7)
+        #expect(activity.first?.playMinutes == 60)
+        #expect(activity.first?.trainingMinutes == 45)
+        #expect(activity[1].playMinutes == 30)
+        #expect(activity.allSatisfy { $0.totalMinutes <= 105 })
+    }
+
+    @Test("On-court minutes and chart totals agree")
+    func minutesConsistency() {
+        let month = calendar.dateInterval(of: .month, for: now)!
+        let play = (0..<8).map { offset in
+            PlaySession(
+                date: calendar.date(byAdding: .day, value: offset, to: month.start)!,
+                durationMinutes: 25 + offset
+            )
+        }
+        let training = (0..<3).map { offset in
+            TrainingSession(
+                date: calendar.date(byAdding: .day, value: offset, to: month.start)!,
+                durationMinutes: 40
+            )
+        }
+
+        let direct = Stats.totalMinutes(play: play, training: training, in: month)
+        let charted = Stats.dailyActivity(play: play, training: training, in: month, calendar: calendar)
+            .reduce(0) { $0 + $1.totalMinutes }
+
+        #expect(direct == charted)
+        #expect(direct == (0..<8).reduce(0) { $0 + 25 + $1 } + 120)
+    }
+
+    @Test("Matches in interval exclude other periods")
+    func matchesInInterval() {
+        let week = calendar.dateInterval(of: .weekOfYear, for: now)!
+        let matches = [
+            Match(date: week.start, myGameScores: [21], opponentGameScores: [10]),
+            Match(date: calendar.date(byAdding: .day, value: -10, to: week.start)!,
+                  myGameScores: [21], opponentGameScores: [10]),
+            Match(date: week.end, myGameScores: [21], opponentGameScores: [10]),
+        ]
+
+        let inWeek = Stats.matches(matches, in: week)
+        #expect(inWeek.count == 1)
+    }
+
+    @Test("Win rate treats draws as non-wins and empty as zero")
+    func winRateMath() {
+        #expect(MatchLogic.winRate(of: []) == 0)
+
+        let matches = [
+            Match(date: day(-2), myGameScores: [21], opponentGameScores: [10]),  // win
+            Match(date: day(-1), myGameScores: [10], opponentGameScores: [21]),  // loss
+            Match(date: day(0), myGameScores: [0], opponentGameScores: [0]),     // unplayed / draw
+        ]
+        #expect(MatchLogic.winRate(of: matches) == 1.0 / 3.0)
+    }
+
+    private func day(_ offset: Int) -> Date {
+        calendar.date(byAdding: .day, value: offset, to: now)!
     }
 }

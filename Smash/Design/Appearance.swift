@@ -1,7 +1,7 @@
 import SwiftUI
 
-/// User-controlled appearance override. The default follows the system —
-/// agency (skill §16): people stay in control of their device.
+/// User-controlled appearance override. Smash opens in dark mode and the
+/// player can switch to light or system appearance any time.
 enum AppearancePreference: String, CaseIterable, Identifiable {
     case system
     case light
@@ -11,7 +11,7 @@ enum AppearancePreference: String, CaseIterable, Identifiable {
 
     var label: String {
         switch self {
-        case .system: "Automatic"
+        case .system: "System"
         case .light: "Light"
         case .dark: "Dark"
         }

@@ -4,8 +4,16 @@ import SwiftData
 struct MatchDetailView: View {
     @Bindable var match: Match
     @Environment(\.modelContext) private var context
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.tabSelection) private var tabSelection
     @State private var showEdit = false
     @State private var confirmDelete = false
+
+    /// Imported or hand-edited backups can have unequal score arrays. Only
+    /// show pairs that exist in both, so indexing can never go out of bounds.
+    private var pairedGameCount: Int {
+        min(match.myGameScores.count, match.opponentGameScores.count)
+    }
 
     var body: some View {
         List {
@@ -19,12 +27,12 @@ struct MatchDetailView: View {
             }
 
             Section("Score") {
-                ForEach(match.myGameScores.indices, id: \.self) { index in
+                ForEach(0..<pairedGameCount, id: \.self) { index in
                     HStack {
                         Text("Game \(index + 1)")
                             .foregroundStyle(.secondary)
                         Spacer()
-                        Text("\(match.myGameScores[index]) – \(match.opponentGameScores[index])")
+                        Text(match.gameDescription(index))
                             .font(.system(.body, design: .rounded, weight: .semibold))
                             .monospacedDigit()
                     }
@@ -35,6 +43,9 @@ struct MatchDetailView: View {
 
             Section("Details") {
                 LabeledContent("Opponent", value: match.opponent)
+                if match.usesPartner {
+                    LabeledContent("Partner", value: match.partner.isEmpty ? "Not set" : match.partner)
+                }
                 if let level = match.opponentLevel {
                     LabeledContent("Opponent level", value: level.label)
                 }
@@ -58,7 +69,7 @@ struct MatchDetailView: View {
                 }
             }
         }
-        .navigationTitle("vs \(match.opponent)")
+        .navigationTitle("Me vs \(match.opponent)")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
@@ -66,12 +77,16 @@ struct MatchDetailView: View {
                     Button("Edit") { showEdit = true }
                     Button("Delete", role: .destructive) { confirmDelete = true }
                 } label: {
-                    Image(systemName: "ellipsis.circle")
+                    Label("More", systemImage: "ellipsis.circle")
                 }
             }
         }
         .sheet(isPresented: $showEdit) {
-            MatchFormView(match: match)
+            PlayFormView(match: match) {
+                showEdit = false
+                tabSelection.wrappedValue = .sessions
+                dismiss()
+            }
         }
         .confirmationDialog(
             "Delete this match?",
@@ -80,6 +95,7 @@ struct MatchDetailView: View {
         ) {
             Button("Delete match", role: .destructive) {
                 context.delete(match)
+                dismiss()
             }
         } message: {
             Text("This can't be undone.")

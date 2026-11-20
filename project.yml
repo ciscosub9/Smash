@@ -13,18 +13,24 @@ settings:
     IPHONEOS_DEPLOYMENT_TARGET: "18.0"
     TARGETED_DEVICE_FAMILY: "1,2" # iPhone and iPad
 
+configs:
+  Debug: debug
+  Release: release
+  # Free Apple ID testing: no iCloud / Push entitlements (see SmashDeviceQA).
+  DeviceQA: debug
+
 targets:
   Smash:
     type: application
     platform: iOS
     sources:
       - path: Smash
-    entitlements:
-      path: Smash/Smash.entitlements
-      properties:
-        com.apple.developer.icloud-services: [CloudKit]
-        com.apple.developer.icloud-container-identifiers: [iCloud.com.smashapp.smash]
-        aps-environment: development
+      # Privacy manifest (also picked up automatically by XcodeGen, listed
+      # explicitly so the resource bundle membership is obvious).
+      - path: Smash/Resources/PrivacyInfo.xcprivacy
+        buildPhase: resources
+    # Entitlements are referenced per-configuration in settings below so the
+    # DeviceQA build can drop iCloud/Push. Files live in Smash/.
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.smashapp.smash
@@ -35,11 +41,18 @@ targets:
         INFOPLIST_KEY_UISupportedInterfaceOrientations~ipad: "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"
         INFOPLIST_KEY_CFBundleShortVersionString: "1.0.0"
         INFOPLIST_KEY_CFBundleVersion: "1"
-        # Backup files use Apple's standard AES-GCM for user-data protection —
-        # qualifies as exempt encryption; skips the export-compliance prompt on upload.
+        # NO = no non-exempt encryption. Password-protected backups use Apple's
+        # AES-GCM and are treated as mass-market exempt; confirm this answer in
+        # App Store Connect at submission time.
         INFOPLIST_KEY_ITSAppUsesNonExemptEncryption: NO
         CODE_SIGN_ENTITLEMENTS: Smash/Smash.entitlements
         ENABLE_PREVIEWS: YES
+      configs:
+        DeviceQA:
+          # Personal teams don't support iCloud or Push. Keep the full
+          # entitlements for App Store / paid-team builds, drop them here.
+          CODE_SIGN_ENTITLEMENTS: Smash/SmashDeviceQA.entitlements
+          PRODUCT_BUNDLE_IDENTIFIER: com.ciscosub9.smash.qa
 
   SmashTests:
     type: bundle.unit-test
@@ -60,7 +73,22 @@ schemes:
         SmashTests: [test]
     run:
       config: Debug
+      # Demo content for Xcode testing. Production builds don't get launch
+      # arguments, so this never affects the App Store binary.
+      commandLineArguments:
+        "-sampleData": true
     test:
       config: Debug
       targets:
         - SmashTests
+
+  # Install on a real iPhone with a free Personal Team.
+  # iCloud toggle will report unavailable; everything else works locally.
+  SmashDeviceQA:
+    build:
+      targets:
+        Smash: all
+    run:
+      config: DeviceQA
+      commandLineArguments:
+        "-sampleData": true
