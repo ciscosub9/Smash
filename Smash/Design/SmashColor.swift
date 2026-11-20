@@ -24,6 +24,10 @@ enum SmashColor {
         light: (0x00, 0x56, 0xCC), // #0056CC — 6.3:1 on white
         dark: (0x0A, 0x84, 0xFF)
     )
+    static let partnerText = dynamic(
+        light: (0x6A, 0x1B, 0x9A), // #6A1B9A — 8.2:1 on white
+        dark: (0xC7, 0x7B, 0xFF)
+    )
 
     /// Training is consistently blue everywhere (chart, chips, form, logger tile).
     static let training = infoText

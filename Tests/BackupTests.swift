@@ -10,6 +10,7 @@ struct BackupTests {
 
     private func makeContainer() -> ModelContainer {
         let schema = Schema([
+            Player.self,
             PlaySession.self,
             TrainingSession.self,
             Match.self,

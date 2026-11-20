@@ -87,7 +87,7 @@ Smash/
 ├── Services/     SmashStore (container + sync), Backup, Stats (pure aggregation logic)
 ├── Views/        Dashboard, Sessions, Players, Tournaments, Profile, Settings
 ├── Design/       Shared components: press styles, stat cards, empty states
-└── Tests/        Swift Testing suites for scoring and stats logic
+└── Tests/        Swift Testing suites for scoring, stats, backup and coach-insights logic
 ```
 
 It's Swift 6 with main-actor-by-default isolation. SwiftData handles storage. Scoring and stats are pure functions with unit tests, so they don't depend on the database. No third-party dependencies.

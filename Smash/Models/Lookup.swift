@@ -82,9 +82,6 @@ nonisolated enum PointSystem: String, CaseIterable, Identifiable {
 
     var id: String { rawValue }
 
-    /// Only the two fixed-length systems are offered when scoring a game.
-    static let scoringOptions: [PointSystem] = [.points15, .points21]
-
     var label: String {
         switch self {
         case .points15: "15 points"
@@ -349,13 +346,6 @@ nonisolated enum BadmintonDrillLibrary {
     /// Names only, for the training form's quick-pick menu.
     static var presets: [String] { drills.map(\.name) }
 
-    static func drills(in category: String) -> [BadmintonDrill] {
-        drills.filter { $0.category == category }
-    }
-
-    static func drill(named name: String) -> BadmintonDrill? {
-        drills.first { $0.name == name }
-    }
 }
 
 // MARK: - Training

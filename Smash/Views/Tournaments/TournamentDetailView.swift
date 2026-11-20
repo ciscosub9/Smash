@@ -83,7 +83,7 @@ struct TournamentDetailView: View {
                         Label("Delete tournament", systemImage: "trash")
                     }
                 } label: {
-                    Image(systemName: "ellipsis.circle")
+                    Label("More options", systemImage: "ellipsis.circle")
                 }
             }
         }

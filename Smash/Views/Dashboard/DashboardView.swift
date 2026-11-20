@@ -147,7 +147,7 @@ struct DashboardView: View {
                 title: "Matches",
                 value: "\(matches.count)",
                 symbol: "trophy",
-                tint: .purple,
+                tint: SmashColor.partnerText,
                 caption: "games this \(periodWord)"
             )
             StatCard(

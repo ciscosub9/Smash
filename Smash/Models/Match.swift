@@ -20,7 +20,8 @@ final class Match {
     var formatRaw: String = MatchFormat.bestOf3.rawValue
 
     /// Points scored per game, parallel to `opponentGameScores`.
-    /// One entry per game played (1 for single game, up to 3 for best of 3).
+    /// One entry per game played: three for best of three, or as many as
+    /// needed for a variable-length continuous match.
     var myGameScores: [Int] = []
     var opponentGameScores: [Int] = []
     var notes: String? = nil

@@ -1,6 +1,5 @@
 # Xcode
 *.xcodeproj
-!**/project.xcworkspace/xcshareddata/IDEWorkspaceChecks.plist
 xcuserdata/
 *.xcuserstate
 *.xcscmblueprint

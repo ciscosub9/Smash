@@ -8,8 +8,8 @@ struct RootView: View {
     @State private var selection = Tab.initialFromLaunchArguments
     @State private var showOnboarding = !PlayerProfile.onboardingCompleted
     @State private var showTour = PlayerProfile.onboardingCompleted && !PlayerProfile.appTourCompleted
-    /// Set once when the app is launched. Minimising only backgrounds the
-    /// scene, so this stays false and the splash does not replay.
+    /// Starts true on a fresh process and is cleared once the splash finishes.
+    /// The value survives background/foreground, so it never replays there.
     @State private var showSplash = true
 
     enum Tab: String, CaseIterable {

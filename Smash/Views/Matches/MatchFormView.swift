@@ -17,6 +17,8 @@ struct MatchFormView: View {
     @State private var pointSystem: PointSystem = .points21
     @State private var format: MatchFormat = .bestOf3
     @State private var gameCount = 3
+    /// Remembered length so switching formats cannot silently drop games.
+    @State private var continuousGameCount = 1
     @State private var myScores: [Int] = [0, 0, 0]
     @State private var opponentScores: [Int] = [0, 0, 0]
     @State private var selectedTournament: Tournament?
@@ -160,7 +162,7 @@ struct MatchFormView: View {
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                 } header: {
-                    Text("Rules")
+                    Text("Game Record")
                 }
 
                 Section {
@@ -264,7 +266,12 @@ struct MatchFormView: View {
     // MARK: - Logic
 
     private func setFormat(_ newValue: MatchFormat) {
-        gameCount = newValue == .bestOf3 ? 3 : 1
+        if newValue == .bestOf3 {
+            if format != .bestOf3 { continuousGameCount = gameCount }
+            gameCount = 3
+        } else {
+            gameCount = max(1, continuousGameCount)
+        }
         let target = max(3, gameCount)
         while myScores.count < target { myScores.append(0) }
         while opponentScores.count < target { opponentScores.append(0) }
@@ -363,6 +370,7 @@ struct MatchFormView: View {
             pointSystem = editing.pointSystem
             format = editing.format
             gameCount = editing.gameCount
+            continuousGameCount = max(1, editing.gameCount)
             var mine = editing.myGameScores
             var theirs = editing.opponentGameScores
             let target = max(3, gameCount)

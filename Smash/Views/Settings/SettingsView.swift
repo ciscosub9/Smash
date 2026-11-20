@@ -204,7 +204,7 @@ struct SettingsView: View {
                     systemImage: "exclamationmark.triangle"
                 )
                 .font(.footnote)
-                .foregroundStyle(.orange)
+                .foregroundStyle(SmashColor.warningText)
             }
         }
 
@@ -212,7 +212,7 @@ struct SettingsView: View {
             Section {
                 Label(storeError, systemImage: "exclamationmark.triangle")
                     .font(.footnote)
-                    .foregroundStyle(.orange)
+                    .foregroundStyle(SmashColor.warningText)
             }
         }
     }
@@ -244,7 +244,7 @@ struct SettingsView: View {
                 if passwordMismatch {
                     Label("Passwords don't match", systemImage: "exclamationmark.circle")
                         .font(.footnote)
-                        .foregroundStyle(.orange)
+                        .foregroundStyle(SmashColor.warningText)
                 }
             }
             Button {

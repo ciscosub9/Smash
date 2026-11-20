@@ -45,11 +45,3 @@ final class PlaySession {
 
     var duration: TimeInterval { TimeInterval(durationMinutes) * 60 }
 }
-
-extension PlaySession {
-    /// All distinct opponent names recorded on play sessions.
-    static func allOpponents(from sessions: [PlaySession]) -> [String] {
-        let names = sessions.flatMap(\.opponents)
-        return Array(Set(names)).sorted()
-    }
-}

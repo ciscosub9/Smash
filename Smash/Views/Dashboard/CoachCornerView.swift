@@ -126,7 +126,7 @@ private struct CoachInsightCard: View {
         case .context: SmashColor.infoText
         case .clutch: SmashColor.warningText
         case .opponent: SmashColor.lossText
-        case .partner: .purple
+        case .partner: SmashColor.partnerText
         }
     }
 }

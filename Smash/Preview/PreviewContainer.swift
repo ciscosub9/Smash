@@ -212,6 +212,7 @@ enum SampleData {
 enum PreviewContainer {
     static func make(withSampleData: Bool = true) -> ModelContainer {
         let schema = Schema([
+            Player.self,
             PlaySession.self,
             TrainingSession.self,
             Match.self,

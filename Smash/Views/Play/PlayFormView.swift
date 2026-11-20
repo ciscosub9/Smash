@@ -22,6 +22,8 @@ struct PlayFormView: View {
     @State private var pointSystem: PointSystem = .points21
     @State private var format: MatchFormat = .bestOf3
     @State private var gameCount = 3
+    /// Remembered length so switching formats cannot silently drop games.
+    @State private var continuousGameCount = 1
     @State private var myScores = [0, 0, 0]
     @State private var opponentScores = [0, 0, 0]
     @State private var showScoreEditor = false
@@ -319,7 +321,12 @@ struct PlayFormView: View {
     }
 
     private func setFormat(_ newValue: MatchFormat) {
-        gameCount = newValue == .bestOf3 ? 3 : 1
+        if newValue == .bestOf3 {
+            if format != .bestOf3 { continuousGameCount = gameCount }
+            gameCount = 3
+        } else {
+            gameCount = max(1, continuousGameCount)
+        }
         let target = max(3, gameCount)
         while myScores.count < target { myScores.append(0) }
         while opponentScores.count < target { opponentScores.append(0) }
@@ -376,6 +383,7 @@ struct PlayFormView: View {
         pointSystem = match.pointSystem
         format = match.format
         gameCount = match.gameCount
+        continuousGameCount = max(1, match.gameCount)
         myScores = padded(match.myGameScores)
         opponentScores = padded(match.opponentGameScores)
         partner = match.partner

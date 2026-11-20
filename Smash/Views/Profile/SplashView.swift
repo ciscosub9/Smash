@@ -8,9 +8,8 @@ import SwiftUI
 //
 // Keyframe offsets mirror the 1.6s timeline in shuttlecock-animation.html.
 //
-// Asset required: add the Boxicons "shuttlecock" SVG to your asset catalog as
-// `Shuttlecock.imageset/Shuttlecock.svg` (template rendering). The SVG is the
-// same one shipped in the preview (shuttlecock-animation.html).
+// The Boxicons shuttlecock ships as `Shuttlecock.imageset/Shuttlecock.svg`
+// in the asset catalog and is rendered as a template.
 
 struct SplashView: View {
     static let duration: TimeInterval = 1.6
@@ -125,8 +124,9 @@ private struct SplashLayout {
     }
 
     var finalPose: SplashPose {
-        // Matches the last keyframe (reference scale 14 relative to 12).
-        SplashPose(scale: Double(coverScale) * 14.0 / 12.0, opacity: 0.12, rotation: 0,
+        // The reference's reduced-motion end state is scale(12), not the
+        // later scale(14) used only while the animation plays.
+        SplashPose(scale: Double(coverScale), opacity: 0.12, rotation: 0,
                    textOpacity: 1, textScale: 1)
     }
 }

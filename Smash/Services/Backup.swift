@@ -54,15 +54,13 @@ nonisolated struct TrainingSessionSnapshot: Codable, Sendable {
     var intensity: String?
     var notes: String?
 
-    /// Older backups stored one `drillName` and a `coach`. Both are ignored on
-    /// import now: the coach field is gone and the single drill becomes the
-    /// first entry of `drillNames`.
-    var coach: String?
+    /// Older backups stored one `drillName`; it becomes the first entry of
+    /// `drillNames`. A legacy `coach` key is ignored during decoding.
     var drillName: String?
 
     private enum CodingKeys: String, CodingKey {
         case date, durationMinutes, focusAreas, drillsDescription
-        case drillNames, drillSets, drillIntensities, setsDone, intensity, notes, coach, drillName
+        case drillNames, drillSets, drillIntensities, setsDone, intensity, notes, drillName
     }
 
     init(from decoder: Decoder) throws {
@@ -77,7 +75,6 @@ nonisolated struct TrainingSessionSnapshot: Codable, Sendable {
         setsDone = try values.decodeIfPresent(Int.self, forKey: .setsDone)
         intensity = try values.decodeIfPresent(String.self, forKey: .intensity)
         notes = try values.decodeIfPresent(String.self, forKey: .notes)
-        coach = try values.decodeIfPresent(String.self, forKey: .coach)
         drillName = try values.decodeIfPresent(String.self, forKey: .drillName)
     }
 
@@ -92,7 +89,6 @@ nonisolated struct TrainingSessionSnapshot: Codable, Sendable {
         setsDone = session.setsDone
         intensity = session.intensityRaw
         notes = session.notes
-        coach = nil
         drillName = nil
     }
 
@@ -463,7 +459,7 @@ nonisolated enum Backup {
         try BackupFormat.prettyJSONEncoder().encode(bundle)
     }
 
-    /// Kept as the single-call convenience used by storage migration and tests.
+    /// Convenience for tests and manual exports; migration uses the granular API.
     static func exportData(context: ModelContext) throws -> Data {
         try encode(makeBundle(context: context))
     }
@@ -568,7 +564,6 @@ nonisolated enum Backup {
         session.drillSets = sets.map { min(max($0, 1), 50) }
         session.drillIntensities = intensities.map { Intensity(rawValue: $0)?.rawValue ?? "" }
         session.drillName = nil
-        session.coach = nil
         return session
     }
 

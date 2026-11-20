@@ -40,8 +40,12 @@ struct StatsTests {
         #expect(activity.count == 7)
         #expect(activity.last?.playMinutes == 60)
         #expect(activity.last?.trainingMinutes == 45)
+        #expect(activity.last?.playCount == 1)
+        #expect(activity.last?.trainingCount == 1)
+        #expect(activity.last?.totalSessions == 2)
         #expect(activity[activity.count - 2].playMinutes == 30)
         #expect(activity[activity.count - 2].trainingMinutes == 0)
+        #expect(activity[activity.count - 2].totalSessions == 1)
     }
 
     @Test("Daily activity ignores sessions older than the window")

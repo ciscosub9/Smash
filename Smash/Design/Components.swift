@@ -467,7 +467,7 @@ struct MatchRow: View {
                 Spacer()
                 Text(AppFormat.dateTime(match.date))
                     .font(.caption)
-                    .foregroundStyle(.tertiary)
+                    .foregroundStyle(.secondary)
             }
         }
         .padding(.vertical, 4)

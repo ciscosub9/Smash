@@ -64,7 +64,7 @@ struct SessionsView: View {
                 }
             }
             .navigationTitle("Sessions")
-            .searchable(text: $searchText, placement: .navigationBarDrawer(displayMode: .always), prompt: "Opponent, court, drill, notes…")
+            .searchable(text: $searchText, placement: .navigationBarDrawer(displayMode: .always), prompt: "Opponent, drill, notes…")
             .overlay(alignment: .bottomTrailing) {
                 Button { showLog = true } label: {
                     AddButtonLabel()
@@ -172,25 +172,28 @@ struct SessionsView: View {
     /// One pass over all matches builds this lookup. Previously the list
     /// scanned every match to collect linked IDs, then scanned all matches
     /// again for each play session — O(sessions × matches).
-    private var matchLookup: [MatchLinkKey: Match] {
-        var result: [MatchLinkKey: Match] = [:]
+    private var matchLookup: [MatchLinkKey: [Match]] {
+        var result: [MatchLinkKey: [Match]] = [:]
         for match in matches where match.tournament == nil {
             let names = match.opponent
                 .components(separatedBy: " & ")
                 .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
-            guard let key = linkKey(day: match.date, names: names), result[key] == nil else { continue }
-            result[key] = match
+            guard let key = linkKey(day: match.date, names: names) else { continue }
+            result[key, default: []].append(match)
         }
         return result
     }
 
     private var allItems: [SessionItem] {
         let lookup = matchLookup
+        var linkedMatchIDs = Set<PersistentIdentifier>()
         let paired = playSessions.map { session -> (PlaySession, Match?) in
-            guard let key = linkKey(day: session.date, names: session.opponents) else { return (session, nil) }
-            return (session, lookup[key])
+            guard let key = linkKey(day: session.date, names: session.opponents),
+                  let match = lookup[key]?.first(where: { !linkedMatchIDs.contains($0.id) })
+            else { return (session, nil) }
+            linkedMatchIDs.insert(match.id)
+            return (session, match)
         }
-        let linkedMatchIDs = Set(paired.compactMap { $0.1?.id })
 
         var result: [SessionItem] = paired.map { SessionItem.play($0.0, $0.1) }
         result += matches.filter { !linkedMatchIDs.contains($0.id) }.map { .match($0) }

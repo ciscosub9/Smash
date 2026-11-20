@@ -288,11 +288,6 @@ enum Stats {
 
     // MARK: Matches
 
-    /// All distinct opponents across matches, alphabetically.
-    static func allOpponents(from matches: [Match]) -> [String] {
-        Array(Set(matches.map(\.opponent))).filter { !$0.isEmpty }.sorted()
-    }
-
     /// Win/loss record grouped by opponent, worst-first for improvement, best-first by default.
     static func recordsByOpponent(_ matches: [Match], ascending: Bool = false) -> [Record] {
         let grouped = Dictionary(grouping: matches, by: \.opponent)
@@ -324,7 +319,7 @@ enum Stats {
     }
 
     /// Current consecutive win/loss streak, newest match first.
-    /// Returns `("win", 3)` for three straight wins.
+    /// Returns `(.win, 3)` for three straight wins.
     static func currentStreak(_ matches: [Match]) -> (kind: MatchOutcome, count: Int)? {
         let sorted = matches.sorted(by: newerFirst)
         guard let first = sorted.first, let kind = normalizedOutcome(first) else { return nil }

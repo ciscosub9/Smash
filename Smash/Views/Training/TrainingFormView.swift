@@ -36,7 +36,10 @@ struct TrainingFormView: View {
     private var formContent: some View {
         Form {
             Section {
-                DateTimeEntry(date: $date)
+                DateTimeEntry(date: Binding(
+                    get: { date },
+                    set: { date = min($0, Date.now) }
+                ))
                 VStack(alignment: .leading, spacing: 4) {
                     HStack {
                         Text("Duration")
@@ -218,6 +221,7 @@ struct TrainingFormView: View {
     }
 
     private func save() {
+        guard !saved, date <= Date.now else { return }
         let entries = resolvedDrills
         let description = drillsDescription.trimmingCharacters(in: .whitespaces)
         let names = entries.map(\.name)
