@@ -46,6 +46,8 @@ targets:
         # App Store Connect at submission time.
         INFOPLIST_KEY_ITSAppUsesNonExemptEncryption: NO
         CODE_SIGN_ENTITLEMENTS: Smash/Smash.entitlements
+        CODE_SIGN_STYLE: Automatic
+        DEVELOPMENT_TEAM: 9W72Z7KZKN
         ENABLE_PREVIEWS: YES
       configs:
         DeviceQA:
